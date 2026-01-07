@@ -23,23 +23,32 @@ int main() {
     printf("[DYREKTOR] Magazyn utworzony\n\n");
     wyswietl_stan_magazynu(magazyn);
 
-// 4. Test - dodaj troche skladnikow
-    printf("\n[DYREKTOR] Test: Dodaje skladniki...\n");
-    magazyn->skladnik_A = 5;
-    magazyn->skladnik_B = 3;
-    magazyn->wolne_miejsce -= (5 * ROZMIAR_A + 3 * ROZMIAR_B);
-    
+
     printf("\n");
-    wyswietl_stan_magazynu(magazyn);
+    int sem_id = utworz_semafory();
+    inicjalizuj_semafory(sem_id);
+
+
+//  Test 
+    printf("\n[DYREKTOR] Test operacji P (wait) i V (signal)\n");
     
-    // 5. Poczekaj chwile (zeby bylo widac)
-    printf("\n[DYREKTOR] Czekam 2 sekundy...\n");
-    sleep(2);
+    printf("\n[TEST] Wartosc SEM_MUTEX przed: %d\n", sem_getval(sem_id, SEM_MUTEX));
+    printf("[TEST] Wywoluje sem_wait(MUTEX)...\n");
+    sem_wait(sem_id, SEM_MUTEX);
+    printf("[TEST] Wartosc SEM_MUTEX po wait: %d (sekcja krytyczna)\n", sem_getval(sem_id, SEM_MUTEX));
     
-    // 6. Sprzatanie
+    printf("[TEST] Symulacja pracy w sekcji krytycznej...\n");
+    sleep(1);
+    
+    printf("[TEST] Wywoluje sem_signal(MUTEX)...\n");
+    sem_signal(sem_id, SEM_MUTEX);
+    printf("[TEST] Wartosc SEM_MUTEX po signal: %d (zwolniono)\n", sem_getval(sem_id, SEM_MUTEX));
+    
+//  Sprzatanie
     printf("\n[DYREKTOR] Sprzatanie...\n");
     odlacz_pamiec_dzielona(magazyn);
     usun_pamiec_dzielona(shm_id);
+    usun_semafory(sem_id);
     
     
     return 0;
