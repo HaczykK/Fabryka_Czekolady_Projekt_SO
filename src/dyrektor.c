@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <unistd.h>
 #include "common.h"
 #include "utils.h"
 
@@ -6,18 +7,40 @@
 int main() {
     printf("Dyrektor: Start testu\n");
 
-    Magazyn testowy;
-    testowy.skladnik_A = 10;
-    testowy.skladnik_B = 5;
-    testowy.skladnik_C = 2;
-    testowy.skladnik_D = 1;
-    testowy.wolne_miejsce = MAGAZYN_POJEMNOSC - (10 * ROZMIAR_A + 5 * ROZMIAR_B + 2 * ROZMIAR_C + 1 * ROZMIAR_D);
+    int shm_id = utworz_pamiec_dzielona();
 
-    printf("Pojemnosc: %d jednostek\n", MAGAZYN_POJEMNOSC);
-    printf("Rozmiary: A:%d, B:%d, C:%d, D:%d\n", ROZMIAR_A, ROZMIAR_B, ROZMIAR_C, ROZMIAR_D);
-
-    wyswietl_stan_magazynu(&testowy);
+    Magazyn* magazyn = polacz_z_pamiecia_dzielona(shm_id);
 
 
+    printf("\n[DYREKTOR] Inicjalizacja magazynu:\n");
+    
+    magazyn->skladnik_A = 0;
+    magazyn->skladnik_B = 0;
+    magazyn->skladnik_C = 0;
+    magazyn->skladnik_D = 0;
+    magazyn->wolne_miejsce = MAGAZYN_POJEMNOSC;
+
+    printf("[DYREKTOR] Magazyn utworzony\n\n");
+    wyswietl_stan_magazynu(magazyn);
+
+// 4. Test - dodaj troche skladnikow
+    printf("\n[DYREKTOR] Test: Dodaje skladniki...\n");
+    magazyn->skladnik_A = 5;
+    magazyn->skladnik_B = 3;
+    magazyn->wolne_miejsce -= (5 * ROZMIAR_A + 3 * ROZMIAR_B);
+    
+    printf("\n");
+    wyswietl_stan_magazynu(magazyn);
+    
+    // 5. Poczekaj chwile (zeby bylo widac)
+    printf("\n[DYREKTOR] Czekam 2 sekundy...\n");
+    sleep(2);
+    
+    // 6. Sprzatanie
+    printf("\n[DYREKTOR] Sprzatanie...\n");
+    odlacz_pamiec_dzielona(magazyn);
+    usun_pamiec_dzielona(shm_id);
+    
+    
     return 0;
 }
