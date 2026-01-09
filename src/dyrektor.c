@@ -33,33 +33,65 @@ int main() {
 
 
 //  Test 
-    printf("\n[DYREKTOR] Uruchamiam dostawce skladnika A...\n");
+
+    //uruchamianie dostawcow (A,B,C)
+    printf("\n[DYREKTOR] Uruchamiam dostawcow...\n");
     
-    pid_t pid = fork();
-    
-    if (pid == 0) {
-        // Proces potomny - dostawca
+    pid_t pid_a = fork();
+    if (pid_a == 0) {
         execl("./bin/dostawca", "dostawca", "A", NULL);
-        perror("execl");
-        exit(1);
-    } else if (pid > 0) {
-        // Proces rodzica - dyrektor
-        printf("[DYREKTOR] Dostawca A uruchomiony (PID: %d)\n", pid);
-        
-        // Czekaj na zakonczenie dostawcy
-        int status;
-        waitpid(pid, &status, 0);
-        
-        printf("\n[DYREKTOR] Dostawca zakonczyl prace\n\n");
-        
-        // Pokaz koncowy stan magazynu
-        wyswietl_stan_magazynu(magazyn);
-        
-    } else {
-        perror("fork");
+        perror("execl dostawca A");
         exit(1);
     }
+    printf("[DYREKTOR] Dostawca A uruchomiony (PID: %d)\n", pid_a);
     
+    pid_t pid_b = fork();
+    if (pid_b == 0) {
+        execl("./bin/dostawca", "dostawca", "B", NULL);
+        perror("execl dostawca B");
+        exit(1);
+    }
+    printf("[DYREKTOR] Dostawca B uruchomiony (PID: %d)\n", pid_b);
+    
+    pid_t pid_c = fork();
+    if (pid_c == 0) {
+        execl("./bin/dostawca", "dostawca", "C", NULL);
+        perror("execl dostawca C");
+        exit(1);
+    }
+    printf("[DYREKTOR] Dostawca C uruchomiony (PID: %d)\n", pid_c);
+    
+
+    //uruchamianie pracownika
+    printf("\n[DYREKTOR] Uruchamiam pracownika na stanowisku 1...\n");
+    
+    pid_t pid_prac1 = fork();
+    if (pid_prac1 == 0) {
+        execl("./bin/pracownik", "pracownik", "1", NULL);
+        perror("execl pracownik");
+        exit(1);
+    }
+    printf("[DYREKTOR] Pracownik 1 uruchomiony (PID: %d)\n\n", pid_prac1);
+    
+
+    printf("[DYREKTOR] Oczekiwanie na zakonczenie procesow...\n\n");
+    
+    int status;
+    pid_t pid;
+    int zakonczone = 0;
+    
+    while (zakonczone < 4) {
+        pid = wait(&status);
+        if (pid > 0) {
+            printf("[DYREKTOR] Proces PID:%d zakonczyl prace\n", pid);
+            zakonczone++;
+        }
+    }
+    
+    
+    printf("\n[DYREKTOR] Wszystkie procesy zakonczone\n\n");
+    wyswietl_stan_magazynu(magazyn);
+
 //  Sprzatanie
     printf("\n[DYREKTOR] Sprzatanie...\n");
     odlacz_pamiec_dzielona(magazyn);
