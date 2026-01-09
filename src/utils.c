@@ -19,7 +19,7 @@ union semun {
 
 
 void wyswietl_stan_magazynu(Magazyn* mag) {
-    printf("Stan magazynu");
+    printf("\n\nStan magazynu");
     printf("Skladnik A: %d\n", mag->skladnik_A);
     printf("Skladnik B: %d\n", mag->skladnik_B);
     printf("Skladnik C: %d\n", mag->skladnik_C);
@@ -160,4 +160,27 @@ int sem_getval(int sem_id, int sem_num) {
     }
     
     return val;
+}
+
+//Funkcje pomocnicze dla magazynu
+int polacz_semafory() {
+    int sem_id = semget(SEM_KEY, SEM_COUNT, 0);
+
+    if(sem_id == -1) {
+        perror("semget polacz");
+        exit(EXIT_FAILURE);
+    }
+
+    return sem_id;
+}
+
+int polacz_magazyn_z_pamiecia_dzielona() {
+    int shm_id = shmget(SHM_KEY, sizeof(Magazyn), 0);
+
+    if(shm_id == -1) {
+        perror("shmget polacz");
+        exit(EXIT_FAILURE);
+    }
+
+    return shm_id;
 }

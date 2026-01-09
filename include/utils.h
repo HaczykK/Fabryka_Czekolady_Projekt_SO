@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-
+// Funkcja wyswietlajaca ilosc skladnikow w magazynie
 void wyswietl_stan_magazynu(Magazyn* mag);
 
 
@@ -20,5 +20,9 @@ void usun_semafory(int sem_id);
 void sem_wait(int sem_id, int sem_num);
 void sem_signal(int sem_id, int sem_num);
 int sem_getval(int sem_id, int sem_num);
+
+//Funkcje pomocnicze dla magazynu - semafory i pamiedz dzielona
+int polacz_semafory();
+int polacz_magazyn_z_pamiecia_dzielona();
 
 #endif

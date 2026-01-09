@@ -1,17 +1,20 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
-#include "common.h"
+#include <sys/wait.h>
+#include "common.h"  
 #include "utils.h"
 
 
 int main() {
     printf("Dyrektor: Start testu\n");
 
+    //Utworzenie pamieci dzielonej
     int shm_id = utworz_pamiec_dzielona();
 
     Magazyn* magazyn = polacz_z_pamiecia_dzielona(shm_id);
 
-
+    //Stowrzenie magazynu 
     printf("\n[DYREKTOR] Inicjalizacja magazynu:\n");
     
     magazyn->skladnik_A = 0;
@@ -21,28 +24,41 @@ int main() {
     magazyn->wolne_miejsce = MAGAZYN_POJEMNOSC;
 
     printf("[DYREKTOR] Magazyn utworzony\n\n");
-    wyswietl_stan_magazynu(magazyn);
-
-
+    wyswietl_stan_magazynu(magazyn);    //stan poczatkowy magazynu
     printf("\n");
+
+    //Utworzenie semaforow
     int sem_id = utworz_semafory();
     inicjalizuj_semafory(sem_id);
 
 
 //  Test 
-    printf("\n[DYREKTOR] Test operacji P (wait) i V (signal)\n");
+    printf("\n[DYREKTOR] Uruchamiam dostawce skladnika A...\n");
     
-    printf("\n[TEST] Wartosc SEM_MUTEX przed: %d\n", sem_getval(sem_id, SEM_MUTEX));
-    printf("[TEST] Wywoluje sem_wait(MUTEX)...\n");
-    sem_wait(sem_id, SEM_MUTEX);
-    printf("[TEST] Wartosc SEM_MUTEX po wait: %d (sekcja krytyczna)\n", sem_getval(sem_id, SEM_MUTEX));
+    pid_t pid = fork();
     
-    printf("[TEST] Symulacja pracy w sekcji krytycznej...\n");
-    sleep(1);
-    
-    printf("[TEST] Wywoluje sem_signal(MUTEX)...\n");
-    sem_signal(sem_id, SEM_MUTEX);
-    printf("[TEST] Wartosc SEM_MUTEX po signal: %d (zwolniono)\n", sem_getval(sem_id, SEM_MUTEX));
+    if (pid == 0) {
+        // Proces potomny - dostawca
+        execl("./bin/dostawca", "dostawca", "A", NULL);
+        perror("execl");
+        exit(1);
+    } else if (pid > 0) {
+        // Proces rodzica - dyrektor
+        printf("[DYREKTOR] Dostawca A uruchomiony (PID: %d)\n", pid);
+        
+        // Czekaj na zakonczenie dostawcy
+        int status;
+        waitpid(pid, &status, 0);
+        
+        printf("\n[DYREKTOR] Dostawca zakonczyl prace\n\n");
+        
+        // Pokaz koncowy stan magazynu
+        wyswietl_stan_magazynu(magazyn);
+        
+    } else {
+        perror("fork");
+        exit(1);
+    }
     
 //  Sprzatanie
     printf("\n[DYREKTOR] Sprzatanie...\n");
