@@ -37,41 +37,57 @@ int main() {
     //uruchamianie dostawcow (A,B,C)
     printf("\n[DYREKTOR] Uruchamiam dostawcow...\n");
     
-    pid_t pid_a = fork();
-    if (pid_a == 0) {
+    pid_t pid_dostawca_a = fork();
+    if (pid_dostawca_a == 0) {
         execl("./bin/dostawca", "dostawca", "A", NULL);
         perror("execl dostawca A");
         exit(1);
     }
-    printf("[DYREKTOR] Dostawca A uruchomiony (PID: %d)\n", pid_a);
+    printf("[DYREKTOR] Dostawca A uruchomiony (PID: %d)\n", pid_dostawca_a);
     
-    pid_t pid_b = fork();
-    if (pid_b == 0) {
+    pid_t pid_dostawca_b = fork();
+    if (pid_dostawca_b == 0) {
         execl("./bin/dostawca", "dostawca", "B", NULL);
         perror("execl dostawca B");
         exit(1);
     }
-    printf("[DYREKTOR] Dostawca B uruchomiony (PID: %d)\n", pid_b);
+    printf("[DYREKTOR] Dostawca B uruchomiony (PID: %d)\n", pid_dostawca_b);
     
-    pid_t pid_c = fork();
-    if (pid_c == 0) {
+    pid_t pid_dostawca_c = fork();
+    if (pid_dostawca_c == 0) {
         execl("./bin/dostawca", "dostawca", "C", NULL);
         perror("execl dostawca C");
         exit(1);
     }
-    printf("[DYREKTOR] Dostawca C uruchomiony (PID: %d)\n", pid_c);
+    printf("[DYREKTOR] Dostawca C uruchomiony (PID: %d)\n", pid_dostawca_c);
+    
+    pid_t pid_dostawca_d = fork();
+    if (pid_dostawca_d == 0) {
+        execl("./bin/dostawca", "dostawca", "D", NULL);
+        perror("execl dostawca D");
+        exit(1);
+    }
+    printf("[DYREKTOR] Dostawca D uruchomiony (PID: %d)\n", pid_dostawca_d);
     
 
     //uruchamianie pracownika
     printf("\n[DYREKTOR] Uruchamiam pracownika na stanowisku 1...\n");
     
-    pid_t pid_prac1 = fork();
-    if (pid_prac1 == 0) {
+     pid_t pid_pracownik_1 = fork();
+    if (pid_pracownik_1 == 0) {
         execl("./bin/pracownik", "pracownik", "1", NULL);
-        perror("execl pracownik");
+        perror("execl pracownik 1");
         exit(1);
     }
-    printf("[DYREKTOR] Pracownik 1 uruchomiony (PID: %d)\n\n", pid_prac1);
+    printf("[DYREKTOR] Pracownik 1 (TYP_1: A+B+C) uruchomiony (PID: %d)\n", pid_pracownik_1);
+    
+    pid_t pid_pracownik_2 = fork();
+    if (pid_pracownik_2 == 0) {
+        execl("./bin/pracownik", "pracownik", "2", NULL);
+        perror("execl pracownik 2");
+        exit(1);
+    }
+    printf("[DYREKTOR] Pracownik 2 (TYP_2: A+B+D) uruchomiony (PID: %d)\n", pid_pracownik_2);
     
 
     printf("[DYREKTOR] Oczekiwanie na zakonczenie procesow...\n\n");
@@ -79,11 +95,12 @@ int main() {
     int status;
     pid_t pid;
     int zakonczone = 0;
+    int liczba_procesow = 6;
     
-    while (zakonczone < 4) {
+    while (zakonczone < liczba_procesow) {
         pid = wait(&status);
         if (pid > 0) {
-            printf("[DYREKTOR] Proces PID:%d zakonczyl prace\n", pid);
+            printf("\n[DYREKTOR] Proces PID:%d zakonczyl prace (status: %d)\n", pid, WEXITSTATUS(status));
             zakonczone++;
         }
     }
