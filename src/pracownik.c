@@ -2,16 +2,26 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <signal.h>
 #include "common.h"
 #include "utils.h"
 
+int running = 1;
+
+void handle_sigterm(int sig) {
+    running = 0;
+}
+
 int main(int argc, char *argv[]) {
+
     if (argc < 2) {
         printf("Brak argumentu!\n");
         return 1;
     }
     
-     int stanowisko = atoi(argv[1]);
+    signal(SIGTERM, handle_sigterm);
+
+    int stanowisko = atoi(argv[1]);
     
     if (stanowisko != 1 && stanowisko != 2) {
         fprintf(stderr, "Nieprawidlowe stanowisko: %d (dozwolone: 1 lub 2)\n", stanowisko);
@@ -32,13 +42,16 @@ int main(int argc, char *argv[]) {
     
     int wyprodukowano = 0;
 
-    // Petla produkcyjna
-    for (int i = 0; i < 5; i++) {  // 5 czekolad na test
+    while (running) {
+    
         printf("[PRACOWNIK-%d] Czekam na skladniki...\n", stanowisko);
         
         // Czekanie na sygnal czy sa dostepne
         sem_wait(sem_id, SEM_A);  // Potrzebne A
+        if (!running) break;
+
         sem_wait(sem_id, SEM_B);  // Potrzebne B
+        if (!running) break;
         
         if (stanowisko == 1) {
             sem_wait(sem_id, SEM_C);  // Stanowisko 1 potrzebuje C
@@ -46,7 +59,8 @@ int main(int argc, char *argv[]) {
             sem_wait(sem_id, SEM_D);  // Stanowisko 2 potrzebuje D
         }
         
-        
+        if (!running) break;
+
         sem_wait(sem_id, SEM_MUTEX);
         
         //Zabranie skladnika z magazynu

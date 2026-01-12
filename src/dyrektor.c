@@ -1,13 +1,39 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 #include <sys/wait.h>
 #include "common.h"  
 #include "utils.h"
 
 
+pid_t pids[6];  // 4 dostawcow + 2 pracownikow
+int liczba_procesow = 0;
+
+
+int shutdown_requested = 0;
+
+void handle_sigint(int sig) {
+    (void)sig;
+    shutdown_requested = 1;
+    
+    printf("\n\n[DYREKTOR] Otrzymano sygnal SIGINT (Ctrl+C)\n");
+    printf("[DYREKTOR] Wysylanie SIGTERM do wszystkich procesow...\n");
+    
+    // Wyslij SIGTERM do wszystkich procesow potomnych
+    for (int i = 0; i < liczba_procesow; i++) {
+        if (pids[i] > 0) {
+            printf("[DYREKTOR] Wysylam SIGTERM do PID:%d\n", pids[i]);
+            kill(pids[i], SIGTERM);
+        }
+    }
+}
+
+
 int main() {
     printf("Dyrektor: Start testu\n");
+
+    signal(SIGINT, handle_sigint);
 
     //Utworzenie pamieci dzielonej
     int shm_id = utworz_pamiec_dzielona();
@@ -34,79 +60,84 @@ int main() {
 
 //  Test 
 
-    //uruchamianie dostawcow (A,B,C)
-    printf("\n[DYREKTOR] Uruchamiam dostawcow...\n");
+    printf("\n[DYREKTOR] Uruchamiam 4 dostawcow (A, B, C, D)...\n");
     
-    pid_t pid_dostawca_a = fork();
-    if (pid_dostawca_a == 0) {
+    pids[liczba_procesow] = fork();
+    if (pids[liczba_procesow] == 0) {
         execl("./bin/dostawca", "dostawca", "A", NULL);
         perror("execl dostawca A");
         exit(1);
     }
-    printf("[DYREKTOR] Dostawca A uruchomiony (PID: %d)\n", pid_dostawca_a);
+    printf("[DYREKTOR] Dostawca A uruchomiony (PID: %d)\n", pids[liczba_procesow]);
+    liczba_procesow++;
     
-    pid_t pid_dostawca_b = fork();
-    if (pid_dostawca_b == 0) {
+    pids[liczba_procesow] = fork();
+    if (pids[liczba_procesow] == 0) {
         execl("./bin/dostawca", "dostawca", "B", NULL);
         perror("execl dostawca B");
         exit(1);
     }
-    printf("[DYREKTOR] Dostawca B uruchomiony (PID: %d)\n", pid_dostawca_b);
+    printf("[DYREKTOR] Dostawca B uruchomiony (PID: %d)\n", pids[liczba_procesow]);
+    liczba_procesow++;
     
-    pid_t pid_dostawca_c = fork();
-    if (pid_dostawca_c == 0) {
+    pids[liczba_procesow] = fork();
+    if (pids[liczba_procesow] == 0) {
         execl("./bin/dostawca", "dostawca", "C", NULL);
         perror("execl dostawca C");
         exit(1);
     }
-    printf("[DYREKTOR] Dostawca C uruchomiony (PID: %d)\n", pid_dostawca_c);
+    printf("[DYREKTOR] Dostawca C uruchomiony (PID: %d)\n", pids[liczba_procesow]);
+    liczba_procesow++;
     
-    pid_t pid_dostawca_d = fork();
-    if (pid_dostawca_d == 0) {
+    pids[liczba_procesow] = fork();
+    if (pids[liczba_procesow] == 0) {
         execl("./bin/dostawca", "dostawca", "D", NULL);
         perror("execl dostawca D");
         exit(1);
     }
-    printf("[DYREKTOR] Dostawca D uruchomiony (PID: %d)\n", pid_dostawca_d);
+    printf("[DYREKTOR] Dostawca D uruchomiony (PID: %d)\n", pids[liczba_procesow]);
+    liczba_procesow++;
     
-
-    //uruchamianie pracownika
-    printf("\n[DYREKTOR] Uruchamiam pracownika na stanowisku 1...\n");
+    // 5. Uruchom 2 pracownikow
+    printf("\n[DYREKTOR] Uruchamiam 2 pracownikow (stanowisko 1 i 2)...\n");
     
-     pid_t pid_pracownik_1 = fork();
-    if (pid_pracownik_1 == 0) {
+    pids[liczba_procesow] = fork();
+    if (pids[liczba_procesow] == 0) {
         execl("./bin/pracownik", "pracownik", "1", NULL);
         perror("execl pracownik 1");
         exit(1);
     }
-    printf("[DYREKTOR] Pracownik 1 (TYP_1: A+B+C) uruchomiony (PID: %d)\n", pid_pracownik_1);
+    printf("[DYREKTOR] Pracownik 1 (TYP_1: A+B+C) uruchomiony (PID: %d)\n", pids[liczba_procesow]);
+    liczba_procesow++;
     
-    pid_t pid_pracownik_2 = fork();
-    if (pid_pracownik_2 == 0) {
+    pids[liczba_procesow] = fork();
+    if (pids[liczba_procesow] == 0) {
         execl("./bin/pracownik", "pracownik", "2", NULL);
         perror("execl pracownik 2");
         exit(1);
     }
-    printf("[DYREKTOR] Pracownik 2 (TYP_2: A+B+D) uruchomiony (PID: %d)\n", pid_pracownik_2);
+    printf("[DYREKTOR] Pracownik 2 (TYP_2: A+B+D) uruchomiony (PID: %d)\n", pids[liczba_procesow]);
+    liczba_procesow++;
     
-
-    printf("[DYREKTOR] Oczekiwanie na zakonczenie procesow...\n\n");
+    // 6. Czekaj na zakonczenie wszystkich procesow
+    printf("\n[DYREKTOR] Fabryka dziala!\n");
+    printf("[DYREKTOR] Nacisnij Ctrl+C aby zakonczyc...\n\n");
     
     int status;
     pid_t pid;
     int zakonczone = 0;
-    int liczba_procesow = 6;
     
     while (zakonczone < liczba_procesow) {
         pid = wait(&status);
         if (pid > 0) {
-            printf("\n[DYREKTOR] Proces PID:%d zakonczyl prace (status: %d)\n", pid, WEXITSTATUS(status));
+            printf("\n[DYREKTOR] Proces PID:%d zakonczyl prace\n", pid);
             zakonczone++;
         }
     }
     
-    
-    printf("\n[DYREKTOR] Wszystkie procesy zakonczone\n\n");
+    // 7. Pokaz koncowy stan magazynu
+    printf("\n[DYREKTOR] Wszystkie procesy zakonczone!\n\n");
+    printf("=== KONCOWY STAN MAGAZYNU ===\n");
     wyswietl_stan_magazynu(magazyn);
 
 //  Sprzatanie

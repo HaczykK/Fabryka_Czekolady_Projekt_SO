@@ -2,8 +2,17 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <signal.h>
 #include "common.h"
 #include "utils.h"
+
+// Prosta flaga
+int running = 1;
+
+void handle_sigterm(int sig) {
+    running = 0;
+}
+
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -11,6 +20,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     
+
+    signal(SIGTERM, handle_sigterm);
+
     char skladnik = argv[1][0];
     int rozmiar;
     int sem_skladnik;
@@ -52,7 +64,7 @@ int main(int argc, char *argv[]) {
     srand(time(NULL) + getpid());
 
     // Petla dostarczania skladnikow
-    for (int i = 0; i < 10; i++) {  // 10 dostaw na test
+    while (running) {
         // Losowa ilosc (1-3 sztuki)
         int ilosc = (rand() % 3) + 1;
         int potrzebne_miejsce = ilosc * rozmiar;
@@ -60,10 +72,12 @@ int main(int argc, char *argv[]) {
         printf("[DOSTAWCA-%c] Probuje dostarczyc %d x %c (%d jednostek)...\n", skladnik, ilosc, skladnik, potrzebne_miejsce);
         
         // Petla sprawdzajaca czy w magazynie jest miejsce
-        for (int j = 0; j < potrzebne_miejsce; j++) {
+        for (int j = 0; j < potrzebne_miejsce && running; j++) {
             sem_wait(sem_id, SEM_WOLNE);
         }
         
+        if (!running) break;  // Przerwano przez sygnal
+
         sem_wait(sem_id, SEM_MUTEX);
         
         // Dodaje skladniku do magazynu
