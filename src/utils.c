@@ -19,12 +19,14 @@ union semun {
 
 
 void wyswietl_stan_magazynu(Magazyn* mag) {
-    printf("\n\nStan magazynu\n");
-    printf("Skladnik A: %d\n", mag->skladnik_A);
-    printf("Skladnik B: %d\n", mag->skladnik_B);
-    printf("Skladnik C: %d\n", mag->skladnik_C);
-    printf("Skladnik D: %d\n", mag->skladnik_D);
-    printf("Wolne miejsce: %d/%d\n", mag->wolne_miejsce, MAGAZYN_POJEMNOSC);
+    printf("\n\n==========================\n");
+    printf("||----Stan magazynu-----||\n");
+    printf("||Skladnik A: %d         ||\n", mag->skladnik_A);
+    printf("||Skladnik B: %d         ||\n", mag->skladnik_B);
+    printf("||Skladnik C: %d         ||\n", mag->skladnik_C);
+    printf("||Skladnik D: %d         ||\n", mag->skladnik_D);
+    printf("||Wolne miejsce: %d/%d  ||\n", mag->wolne_miejsce, MAGAZYN_POJEMNOSC);
+    printf("==========================");
 }
 
 // Pamiec dzielona

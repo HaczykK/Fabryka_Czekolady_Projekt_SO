@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     if (argc < 2) return 1;
 
     // Rejestracja sygnalow
-    signal(SIGUSR2, handle_signal); // Stop od Dyrektora
+    signal(SIGUSR1, handle_signal); // Stop od Dyrektora
     signal(SIGTERM, handle_signal);
 
     int stanowisko = atoi(argv[1]);
@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
         printf("[PRACOWNIK-%d] *** WYPRODUKOWANO CZEKOLADE - %s  #%d ***\n", stanowisko, typ_czekolady, wyprodukowano);
     }
 
-    printf("[PRACOWNIK-%d] Koniec. Wyprodukowano: %d\n", stanowisko, wyprodukowano);
+    printf("[PRACOWNIK-%d] Koniec. Wyprodukowano: %d czekolady %s\n", stanowisko, wyprodukowano,typ_czekolady);
     odlacz_pamiec_dzielona(magazyn);
     return 0;
 }

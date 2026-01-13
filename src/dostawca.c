@@ -14,11 +14,45 @@ void handle_signal(int sig) {
 }
 
 
+int czy_bezpiecznie_dostarczyc(Magazyn* m, char typ, int rozmiar) {
+    int wolne = m->wolne_miejsce - rozmiar;
+
+    // Opcja 1 (mniej niż 15 miejsc) -> Blokujemy C i D 
+    if (wolne < 15) {
+        if (typ == 'C' || typ == 'D') {
+            // Wpuszczamy C lub D WYJĄTKOWO tylko jak ich w ogóle nie ma (stan 0)
+            if (typ == 'C' && m->skladnik_C == 0) return 1;
+            if (typ == 'D' && m->skladnik_D == 0) return 1;
+            return 0;
+        }
+    }
+
+    // Opcja 2 (mniej niż 5 miejsc) -> Wpuszczamy tylko skladnik ktorego nam brakuje do produkcji
+    if (wolne < 5) {
+        // Wpuszczamy TYLKO ten składnik, którego brakuje do zera
+        if (typ == 'A' && m->skladnik_A == 0) return 1;
+        if (typ == 'B' && m->skladnik_B == 0) return 1;
+        if (typ == 'C' && m->skladnik_C == 0) return 1;
+        if (typ == 'D' && m->skladnik_D == 0) return 1;
+        
+        return 0;
+    }
+
+    // Opcja: Limit nadprodukcji (zeby nie zapchać jednym typem)
+    int limit = 20;
+    if (typ == 'A' && m->skladnik_A > limit) return 0;
+    if (typ == 'B' && m->skladnik_B > limit) return 0;
+    if (typ == 'C' && m->skladnik_C > limit) return 0;
+    if (typ == 'D' && m->skladnik_D > limit) return 0;
+
+    return 1;
+}
+
 int main(int argc, char *argv[]) {
     if (argc < 2) return 1;
 
     // Rejestracja sygnalow
-    signal(SIGUSR1, handle_signal); // Stop od Dyrektora
+    signal(SIGUSR2, handle_signal); // Stop od Dyrektora
     signal(SIGTERM, handle_signal);
 
     char skladnik = argv[1][0];
@@ -66,6 +100,22 @@ int main(int argc, char *argv[]) {
         if (!running) break;
 
         sem_wait(sem_id, SEM_MUTEX);
+
+        if (!czy_bezpiecznie_dostarczyc(magazyn, skladnik, rozmiar)) {
+            // Jesli jest niebezpiecznie (ryzyko zapchania):
+            
+            // Wychodzimy z magazynu
+            sem_signal(sem_id, SEM_MUTEX);
+            
+            // Ooddajemy miejsce ktore zarezerwowalismy
+            for(int k=0; k<potrzebne_miejsce; k++) {
+                sem_signal(sem_id, SEM_WOLNE);
+            }
+            
+            // Czekamy chwilę i próbujemy od nowa pętli
+            usleep(200000); 
+            continue; 
+        }
         
 
         switch(skladnik) {

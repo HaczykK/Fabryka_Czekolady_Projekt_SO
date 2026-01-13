@@ -125,12 +125,12 @@ int main() {
         switch(opcja) {
             case 1: // Stop Pracownikow
                 printf(">> Wysylam SIGUSR2 do Pracownikow...\n");
-                for(int i=0; i<2; i++) kill(pids_pracownicy[i], SIGUSR2);
+                for(int i=0; i<2; i++) kill(pids_pracownicy[i], SIGUSR1);
                 break;
 
             case 3: // Stop Dostawcow
                 printf(">> Wysylam SIGUSR1 do Dostawcow...\n");
-                for(int i=0; i<4; i++) kill(pids_dostawcy[i], SIGUSR1);
+                for(int i=0; i<4; i++) kill(pids_dostawcy[i], SIGUSR2);
                 break;
             
             case 2: // Stop Magazynu (Wszyscy)
@@ -144,7 +144,10 @@ int main() {
 
                 running = 0;
                 break;
-                
+            
+            case 5:
+                wyswietl_stan_magazynu(magazyn);
+                break;
             default: printf("Nieznana opcja.\n");
         }
     }
