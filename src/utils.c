@@ -19,7 +19,7 @@ union semun {
 
 
 void wyswietl_stan_magazynu(Magazyn* mag) {
-    printf("\n\nStan magazynu");
+    printf("\n\nStan magazynu\n");
     printf("Skladnik A: %d\n", mag->skladnik_A);
     printf("Skladnik B: %d\n", mag->skladnik_B);
     printf("Skladnik C: %d\n", mag->skladnik_C);
@@ -118,6 +118,30 @@ void inicjalizuj_semafory(int sem_id) {
            1, MAGAZYN_POJEMNOSC, 0, 0, 0, 0);
 }
 
+void zaktualizuj_semafory(int sem_id, Magazyn* mag) {
+    union semun arg;
+
+    // 1. Aktualizuj WOLNE miejsce
+    arg.val = mag->wolne_miejsce;
+    semctl(sem_id, SEM_WOLNE, SETVAL, arg);
+    
+    // 2. Aktualizuj stany skladnikow (zeby pracownicy wiedzieli ze cos jest)
+    arg.val = mag->skladnik_A;
+    semctl(sem_id, SEM_SKLAD_A, SETVAL, arg);
+    
+    arg.val = mag->skladnik_B;
+    semctl(sem_id, SEM_SKLAD_B, SETVAL, arg);
+    
+    arg.val = mag->skladnik_C;
+    semctl(sem_id, SEM_SKLAD_C, SETVAL, arg);
+    
+    arg.val = mag->skladnik_D;
+    semctl(sem_id, SEM_SKLAD_D, SETVAL, arg);
+    
+    printf("[DYREKTOR] Semafory zsynchronizowane (Wolne=%d, A=%d, B=%d, C=%d, D=%d)\n",
+           mag->wolne_miejsce, mag->skladnik_A, mag->skladnik_B, mag->skladnik_C, mag->skladnik_D);
+}
+
 void usun_semafory(int sem_id) {
     if (semctl(sem_id, 0, IPC_RMID) == -1) {
         perror("semctl IPC_RMID");
@@ -134,6 +158,9 @@ void sem_wait(int sem_id, int sem_num) {
     op.sem_flg = 0;
     
     if (semop(sem_id, &op, 1) == -1) {
+        if (errno == EINTR) {
+            return; 
+        }
         perror("semop wait");
         exit(EXIT_FAILURE);
     }
@@ -183,4 +210,61 @@ int polacz_magazyn_z_pamiecia_dzielona() {
     }
 
     return shm_id;
+}
+
+// Funkcje zapisu/odczytu stanu magazynu do/z pliku
+
+int zapisz_stan_magazynu(Magazyn* mag, const char* plik) {
+    FILE* f = fopen(plik, "wb");
+    if (f == NULL) {
+        perror("fopen zapis");
+        return -1;
+    }
+    
+    size_t written = fwrite(mag, sizeof(Magazyn), 1, f);
+    fclose(f);
+    
+    if (written != 1) {
+        return -1;
+    }
+    
+    printf("[PLIK] Zapisano stan magazynu do: %s\n", plik);
+    printf("       A=%d B=%d C=%d D=%d Wolne=%d\n", 
+           mag->skladnik_A, mag->skladnik_B, 
+           mag->skladnik_C, mag->skladnik_D, 
+           mag->wolne_miejsce);
+    
+    return 0;
+}
+
+int odczytaj_stan_magazynu(Magazyn* mag, const char* plik) {
+    FILE* f = fopen(plik, "rb");
+    if (f == NULL) {
+        // Plik nie istnieje - to nie jest blad
+        return -1;
+    }
+    
+    size_t read_count = fread(mag, sizeof(Magazyn), 1, f);
+    fclose(f);
+    
+    if (read_count != 1) {
+        return -1;
+    }
+    
+    printf("[PLIK] Odczytano stan magazynu z: %s\n", plik);
+    printf("       A=%d B=%d C=%d D=%d Wolne=%d\n", 
+           mag->skladnik_A, mag->skladnik_B, 
+           mag->skladnik_C, mag->skladnik_D, 
+           mag->wolne_miejsce);
+    
+    return 0;
+}
+
+int czy_istnieje_plik_stanu(const char* plik) {
+    FILE* f = fopen(plik, "rb");
+    if (f == NULL) {
+        return 0;  // Nie istnieje
+    }
+    fclose(f);
+    return 1;  // Istnieje
 }

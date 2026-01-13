@@ -40,20 +40,44 @@ int main() {
 
     int shm_id = utworz_pamiec_dzielona();
     Magazyn* magazyn = polacz_z_pamiecia_dzielona(shm_id);
+    int wczytano_stan = 0;
 
+    // Inicjalizacja magazynu
     printf("[DYREKTOR] Inicjalizacja magazynu...\n");
-    magazyn->skladnik_A = 0;
-    magazyn->skladnik_B = 0;
-    magazyn->skladnik_C = 0;
-    magazyn->skladnik_D = 0;
-    magazyn->wolne_miejsce = MAGAZYN_POJEMNOSC;
+
+    // Sprawdz czy istnieje zapisany stan
+    if (czy_istnieje_plik_stanu(MAGAZYN_PLIK)) {
+        printf("[DYREKTOR] Znaleziono zapisany stan magazynu\n");
+        if (odczytaj_stan_magazynu(magazyn, MAGAZYN_PLIK) == 0) {
+            printf("[DYREKTOR] Stan magazynu odtworzony z pliku!\n");
+            wczytano_stan = 1;
+        } else {
+            printf("[DYREKTOR] Blad odczytu - inicjalizacja od zera\n");
+            magazyn->skladnik_A = 0;
+            magazyn->skladnik_B = 0;
+            magazyn->skladnik_C = 0;
+            magazyn->skladnik_D = 0;
+            magazyn->wolne_miejsce = MAGAZYN_POJEMNOSC;
+            wczytano_stan = 0;
+        }
+    } else {
+        printf("[DYREKTOR] Brak zapisanego stanu - inicjalizacja od zera\n");
+        magazyn->skladnik_A = 0;
+        magazyn->skladnik_B = 0;
+        magazyn->skladnik_C = 0;
+        magazyn->skladnik_D = 0;
+        magazyn->wolne_miejsce = MAGAZYN_POJEMNOSC;
+        wczytano_stan = 0;
+    }
 
     printf("\n[DYREKTOR] Poczatkowy stan magazynu:\n");
     wyswietl_stan_magazynu(magazyn);
 
     int sem_id = utworz_semafory();
     inicjalizuj_semafory(sem_id);
-
+    if (wczytano_stan) {
+        zaktualizuj_semafory(sem_id, magazyn);
+    }
     // Uruchamianie dostawcow
     const char* skladniki[] = {"A", "B", "C", "D"};
     for (int i = 0; i < 4; i++) {
@@ -92,7 +116,6 @@ int main() {
     int opcja;
     
 
-
     while(running) {
         wyswietl_menu();
 
@@ -115,6 +138,10 @@ int main() {
                 printf(">> Koniec symulacji. Zatrzymuje wszystkich...\n");
                 for(int i=0; i<4; i++) kill(pids_dostawcy[i], SIGTERM);
                 for(int i=0; i<2; i++) kill(pids_pracownicy[i], SIGTERM);
+                if (opcja == 4) {
+                    zapisz_stan_magazynu(magazyn, MAGAZYN_PLIK);
+                }
+
                 running = 0;
                 break;
                 

@@ -15,6 +15,7 @@ void usun_pamiec_dzielona(int shm_id);
 // === SEMAFORY (SEM) ===
 int utworz_semafory();
 void inicjalizuj_semafory(int sem_id);
+void zaktualizuj_semafory(int sem_id, Magazyn* mag);
 void usun_semafory(int sem_id);
 void sem_wait(int sem_id, int sem_num);
 void sem_signal(int sem_id, int sem_num);
@@ -27,5 +28,6 @@ int polacz_magazyn_z_pamiecia_dzielona();
 // === PERSISTENCE (ZAPIS/ODCZYT) ===
 int zapisz_stan_magazynu(Magazyn* mag, const char* plik);
 int odczytaj_stan_magazynu(Magazyn* mag, const char* plik);
+int czy_istnieje_plik_stanu(const char* plik);
 
 #endif

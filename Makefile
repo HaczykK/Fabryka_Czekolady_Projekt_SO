@@ -23,7 +23,7 @@ bin/pracownik: src/pracownik.c src/utils.c
 
 clean:
 	rm -rf bin
-	rm -f magazyn.dat
+	rm -f magazyn_stan.dat
 
 run: all
 	./bin/dyrektor

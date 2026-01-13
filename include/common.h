@@ -3,6 +3,8 @@
 
 #include <sys/types.h>
 
+// Plik do zapisu stanu magazynu
+#define MAGAZYN_PLIK "magazyn_stan.dat"
 
 // Pojemnosc magazynu
 #define MAGAZYN_POJEMNOSC 50
