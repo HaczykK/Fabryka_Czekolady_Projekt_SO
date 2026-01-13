@@ -3,6 +3,7 @@
 
 #include <sys/types.h>
 
+
 // Pojemnosc magazynu
 #define MAGAZYN_POJEMNOSC 50
 
@@ -19,10 +20,10 @@
 // Indeksy semaforow
 #define SEM_MUTEX 0       // Mutex do ochrony magazynu
 #define SEM_WOLNE 1       // Liczba wolnych jednostek
-#define SEM_A 2           // Dostepnosc skladnika A
-#define SEM_B 3           // Dostepnosc skladnika B
-#define SEM_C 4           // Dostepnosc skladnika C
-#define SEM_D 5           // Dostepnosc skladnika D
+#define SEM_SKLAD_A 2           // Dostepnosc skladnika A
+#define SEM_SKLAD_B 3           // Dostepnosc skladnika B
+#define SEM_SKLAD_C 4           // Dostepnosc skladnika C
+#define SEM_SKLAD_D 5           // Dostepnosc skladnika D
 #define SEM_COUNT 6       // Laczna liczba semaforow
 
 // Struktura magazynu 

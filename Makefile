@@ -1,26 +1,31 @@
 CC = gcc
-CFLAGS = -Wall -I./include
+CFLAGS = -Wall -Wextra -std=gnu99 -Iinclude -D_GNU_SOURCE
+LDFLAGS = 
 
-all: bin/dyrektor bin/dostawca bin/pracownik
+# Lista programów do zbudowania (USUNIETO bin/magazyn)
+TARGETS = bin/dyrektor bin/dostawca bin/pracownik
+
+all: directories $(TARGETS)
+
+directories:
+	mkdir -p bin
 
 bin/dyrektor: src/dyrektor.c src/utils.c
-	mkdir -p bin
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 bin/dostawca: src/dostawca.c src/utils.c
-	mkdir -p bin
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 bin/pracownik: src/pracownik.c src/utils.c
-	mkdir -p bin
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+# USUNIETO REGULE DLA bin/magazyn
 
 clean:
-	rm -rf bin obj
+	rm -rf bin
+	rm -f magazyn.dat
 
-test: all
+run: all
 	./bin/dyrektor
-	./bin/dostawca A
-	./bin/pracownik 1
 
-.PHONY: all clean test
+.PHONY: all clean run directories

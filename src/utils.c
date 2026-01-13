@@ -106,7 +106,7 @@ void inicjalizuj_semafory(int sem_id) {
     
     // Semafory skladnikow - na poczatku 0 (brak skladnikow)
     arg.val = 0;
-    for (int i = SEM_A; i <= SEM_D; i++) {
+    for (int i = SEM_SKLAD_A; i <= SEM_SKLAD_D; i++) {
         if (semctl(sem_id, i, SETVAL, arg) == -1) {
             perror("semctl skladniki");
             exit(EXIT_FAILURE);
