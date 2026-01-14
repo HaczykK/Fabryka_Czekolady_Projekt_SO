@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <signal.h>
+#include <string.h>
 #include "common.h"
 #include "utils.h"
 
@@ -81,11 +82,16 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    printf("[DOSTAWCA-%c] PID:%d Start pracy (rozmiar jednostki: %d)\n", skladnik, getpid(), rozmiar);
 
     int shm_id = polacz_magazyn_z_pamiecia_dzielona();
     Magazyn* magazyn = polacz_z_pamiecia_dzielona(shm_id);
     int sem_id = polacz_semafory();
+    int msg_id = polacz_kolejke();
+
+    char log_buf[256];
+
+    sprintf(log_buf, "[DOSTAWCA-%c] PID:%d Start pracy (rozmiar jednostki: %d)\n", skladnik, getpid(), rozmiar);
+    wyslij_log(msg_id, log_buf);
     
     srand(time(NULL) + getpid());
 
@@ -135,12 +141,14 @@ int main(int argc, char *argv[]) {
         
         magazyn->wolne_miejsce -= potrzebne_miejsce;
         
-        printf("[DOSTAWCA-%c] Dostarczono %d x %c | Magazyn: A=%d B=%d C=%d D=%d | Wolne:%d/%d\n",
+        sprintf(log_buf, "[DOSTAWCA-%c] Dostarczono %d x %c | Magazyn: A=%d B=%d C=%d D=%d | Wolne:%d/%d\n",
                skladnik, ilosc, skladnik,
                magazyn->skladnik_A, magazyn->skladnik_B,
                magazyn->skladnik_C, magazyn->skladnik_D,
                magazyn->wolne_miejsce, MAGAZYN_POJEMNOSC);
         
+        wyslij_log(msg_id, log_buf);
+
         sem_signal(sem_id, SEM_MUTEX);
         
         for (int j = 0; j < ilosc; j++) sem_signal(sem_id, sem_skladnik);
@@ -148,7 +156,8 @@ int main(int argc, char *argv[]) {
         sleep((rand() % 3) + 1);
     }
     
-    printf("[DOSTAWCA-%c] Koniec pracy.\n", skladnik);
+    sprintf(log_buf, "[DOSTAWCA-%c] Koniec pracy.\n", skladnik);
+    wyslij_log(msg_id, log_buf);
     odlacz_pamiec_dzielona(magazyn);
     return 0;
 }

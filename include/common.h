@@ -5,6 +5,7 @@
 
 // Plik do zapisu stanu magazynu
 #define MAGAZYN_PLIK "magazyn_stan.dat"
+#define PLIK_RAPORTU "raport.txt"
 
 // Pojemnosc magazynu
 #define MAGAZYN_POJEMNOSC 50
@@ -18,6 +19,7 @@
 // Klucze IPC
 #define SHM_KEY 0x1234
 #define SEM_KEY 0x5678
+#define KLUCZ_MSG 0x9999
 
 // Indeksy semaforow
 #define SEM_MUTEX 0       // Mutex do ochrony magazynu
@@ -27,6 +29,12 @@
 #define SEM_SKLAD_C 4           // Dostepnosc skladnika C
 #define SEM_SKLAD_D 5           // Dostepnosc skladnika D
 #define SEM_COUNT 6       // Laczna liczba semaforow
+
+typedef struct {
+    long mtype;       // Typ komunikatu (musi byc > 0)
+    char tekst[256];  // Tresc wiadomosci
+} Komunikat;
+
 
 // Struktura magazynu 
 typedef struct {

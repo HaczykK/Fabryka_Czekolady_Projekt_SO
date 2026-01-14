@@ -3,11 +3,15 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <sys/msg.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
 #include "common.h"  
 #include "utils.h"
 
 pid_t pids_dostawcy[4];
 pid_t pids_pracownicy[2];
+pid_t pid_loger;
 int liczba_dostawcow = 0;
 int liczba_pracownikow = 0;
 
@@ -25,11 +29,40 @@ void wyswietl_menu() {
     fflush(stdout);
 }
 
-void posprzataj(int shm_id, int sem_id, Magazyn* mag) {
+void posprzataj(int shm_id, int sem_id, int msg_id, Magazyn* mag) {
     printf("\n[DYREKTOR] Sprzatanie zasobow...\n");
+
+    // Zabij logera
+    if (pid_loger > 0) {
+        kill(pid_loger, SIGTERM);
+        waitpid(pid_loger, NULL, 0);
+    }
+
+    // Usun kolejke
+    usun_kolejke(msg_id);
     odlacz_pamiec_dzielona(mag);
     usun_pamiec_dzielona(shm_id);
     usun_semafory(sem_id);
+}
+
+void proces_logera() {
+    printf("[LOGER] Start. Zapisuje do pliku: %s\n", PLIK_RAPORTU);
+    int msg_id = utworz_kolejke();
+    
+    FILE* f = fopen(PLIK_RAPORTU, "w");
+    if (!f) { perror("fopen raport"); exit(1); }
+    
+    fprintf(f, "=== RAPORT SYMULACJI ===\n");
+    fflush(f);
+    
+    Komunikat msg;
+    while(1) {
+        // msgrcv blokuje proces (nie zuzywa CPU), czeka na wiadomosc
+        if (msgrcv(msg_id, &msg, sizeof(msg.tekst), 1, 0) != -1) {
+            fprintf(f, "%s\n", msg.tekst);
+            fflush(f);
+        }
+    }
 }
 
 int main() {
@@ -78,6 +111,14 @@ int main() {
     if (wczytano_stan) {
         zaktualizuj_semafory(sem_id, magazyn);
     }
+
+    // Uruchamianie logera
+    if ((pid_loger = fork()) == 0) {
+        proces_logera();
+        exit(0);
+    }
+
+
     // Uruchamianie dostawcow
     const char* skladniki[] = {"A", "B", "C", "D"};
     for (int i = 0; i < 4; i++) {
@@ -156,6 +197,8 @@ int main() {
     for(int i=0; i<6; i++) wait(NULL);
     
     wyswietl_stan_magazynu(magazyn);
-    posprzataj(shm_id, sem_id, magazyn);
+    int msg_id = polacz_kolejke();
+    posprzataj(shm_id, sem_id, msg_id, magazyn);
+
     return 0;
 }

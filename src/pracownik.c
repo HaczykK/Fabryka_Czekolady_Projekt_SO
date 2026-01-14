@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <signal.h>
+#include <string.h>
 #include "common.h"
 #include "utils.h"
 
@@ -23,18 +24,24 @@ int main(int argc, char *argv[]) {
     int stanowisko = atoi(argv[1]);
     const char* typ_czekolady = (stanowisko == 1) ? "TYP_1 (A+B+C)" : "TYP_2 (A+B+D)";
     
-    printf("[PRACOWNIK-%d] PID:%d Start - produkuje czekolade %s\n", stanowisko, getpid(), typ_czekolady);
 
     int shm_id = polacz_magazyn_z_pamiecia_dzielona();
     Magazyn* magazyn = polacz_z_pamiecia_dzielona(shm_id);
     int sem_id = polacz_semafory();
-    
+    int msg_id = polacz_kolejke();
+   
+    char log_buf[256];
+
+    sprintf(log_buf, "[PRACOWNIK-%d] PID:%d Start - produkuje czekolade %s\n", stanowisko, getpid(), typ_czekolady);
+    wyslij_log(msg_id, log_buf); 
+
     srand(time(NULL) + getpid());
     int wyprodukowano = 0;
 
     while (running) {
-        printf("[PRACOWNIK-%d] Czekam na skladniki...\n", stanowisko);
-        
+        sprintf(log_buf, "[PRACOWNIK-%d] Czekam na skladniki...\n", stanowisko);
+        wyslij_log(msg_id, log_buf);
+
         // Pobieranie skladnikow 
         sem_wait(sem_id, SEM_SKLAD_A); if(!running) break;
         sem_wait(sem_id, SEM_SKLAD_B); if(!running) break;
@@ -60,13 +67,14 @@ int main(int argc, char *argv[]) {
         
         magazyn->wolne_miejsce += zwolnione_miejsce;
         
-        printf("[PRACOWNIK-%d] Pobrano skladniki | Magazyn: A=%d B=%d C=%d D=%d | Wolne:%d/%d|\n",
+        sprintf(log_buf, "[PRACOWNIK-%d] Pobrano skladniki | Magazyn: A=%d B=%d C=%d D=%d | Wolne:%d/%d|\n",
                 stanowisko,
                 magazyn->skladnik_A, magazyn->skladnik_B,
                 magazyn->skladnik_C, magazyn->skladnik_D,
                 magazyn->wolne_miejsce, MAGAZYN_POJEMNOSC);
         
 
+        wyslij_log(msg_id, log_buf);
 
         sem_signal(sem_id, SEM_MUTEX);
         
@@ -76,10 +84,12 @@ int main(int argc, char *argv[]) {
         // Produkcja
         sleep((rand() % 2) + 1);
         wyprodukowano++;
-        printf("[PRACOWNIK-%d] *** WYPRODUKOWANO CZEKOLADE - %s  #%d ***\n", stanowisko, typ_czekolady, wyprodukowano);
+        sprintf(log_buf, "[PRACOWNIK-%d] *** WYPRODUKOWANO CZEKOLADE - %s  #%d ***\n", stanowisko, typ_czekolady, wyprodukowano);
+        wyslij_log(msg_id, log_buf);
     }
 
-    printf("[PRACOWNIK-%d] Koniec. Wyprodukowano: %d czekolady %s\n", stanowisko, wyprodukowano,typ_czekolady);
+    sprintf(log_buf, "[PRACOWNIK-%d] Koniec. Wyprodukowano: %d czekolady %s\n", stanowisko, wyprodukowano,typ_czekolady);
+    wyslij_log(msg_id, log_buf);
     odlacz_pamiec_dzielona(magazyn);
     return 0;
 }

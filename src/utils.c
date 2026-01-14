@@ -4,6 +4,8 @@
 #include <sys/shm.h>
 #include <errno.h>
 #include <sys/sem.h>
+#include <sys/msg.h>
+#include <string.h>
 #include "common.h"
 #include "utils.h"
 
@@ -269,4 +271,35 @@ int czy_istnieje_plik_stanu(const char* plik) {
     }
     fclose(f);
     return 1;  // Istnieje
+}
+
+int utworz_kolejke() {
+    int msg_id = msgget(KLUCZ_MSG, IPC_CREAT | 0600);
+    if (msg_id == -1) { perror("msgget utworz"); exit(EXIT_FAILURE); }
+    return msg_id;
+}
+
+int polacz_kolejke() {
+    int msg_id = msgget(KLUCZ_MSG, 0);
+    if (msg_id == -1) { perror("msgget polacz"); exit(EXIT_FAILURE); }
+    return msg_id;
+}
+
+void usun_kolejke(int msg_id) {
+    if (msg_id != -1) msgctl(msg_id, IPC_RMID, NULL);
+}
+
+// Funkcja do wysylania logow
+void wyslij_log(int msg_id, const char* tekst) {
+    // 1. Wypisz na ekran
+    printf("%s\n", tekst);
+
+    // 2. Wyslij do kolejki (jesli istnieje)
+    if (msg_id != -1) {
+        Komunikat msg;
+        msg.mtype = 1; 
+        strncpy(msg.tekst, tekst, 255);
+        msg.tekst[255] = '\0';
+        msgsnd(msg_id, &msg, sizeof(msg.tekst), IPC_NOWAIT);
+    }
 }
