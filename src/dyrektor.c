@@ -17,14 +17,15 @@ int liczba_pracownikow = 0;
 
 void wyswietl_menu() {
     printf("\n");
-    printf("========================================\n");
-    printf("         MENU DYREKTORA\n");
-    printf("========================================\n");
-    printf("  1 - Polecenie_1: Fabryka konczy prace\n");
-    printf("  2 - Polecenie_2: Zamknij Magazyn\n");
-    printf("  3 - Polecenie_3: Dostawcy przerywaja prace\n");
-    printf("  4 - Polecenie_4: Fabryka+Magazyn konczy prace\n");
-    printf("========================================\n");
+    printf("====================================================\n");
+    printf("||                  MENU DYREKTORA                ||\n");
+    printf("====================================================\n");
+    printf("||  1 - Polecenie_1: Fabryka konczy prace         ||\n");
+    printf("||  2 - Polecenie_2: Zamknij Magazyn              ||\n");
+    printf("||  3 - Polecenie_3: Dostawcy przerywaja prace    ||\n");
+    printf("||  4 - Polecenie_4: Fabryka+Magazyn konczy prace ||\n");
+    printf("||  5 - Polecenie_5: Wyswietl stan magazynu       || \n");
+    printf("====================================================\n");
     printf("Wybierz opcje: ");
     fflush(stdout);
 }
@@ -86,20 +87,12 @@ int main() {
             wczytano_stan = 1;
         } else {
             printf("[DYREKTOR] Blad odczytu - inicjalizacja od zera\n");
-            magazyn->skladnik_A = 0;
-            magazyn->skladnik_B = 0;
-            magazyn->skladnik_C = 0;
-            magazyn->skladnik_D = 0;
-            magazyn->wolne_miejsce = MAGAZYN_POJEMNOSC;
+            inicjalizuj_magazyn(magazyn);
             wczytano_stan = 0;
         }
     } else {
         printf("[DYREKTOR] Brak zapisanego stanu - inicjalizacja od zera\n");
-        magazyn->skladnik_A = 0;
-        magazyn->skladnik_B = 0;
-        magazyn->skladnik_C = 0;
-        magazyn->skladnik_D = 0;
-        magazyn->wolne_miejsce = MAGAZYN_POJEMNOSC;
+        inicjalizuj_magazyn(magazyn);
         wczytano_stan = 0;
     }
 
@@ -165,12 +158,12 @@ int main() {
 
         switch(opcja) {
             case 1: // Stop Pracownikow
-                printf(">> Wysylam SIGUSR2 do Pracownikow...\n");
+                printf(">> Wysylam SIGUSR1 do Pracownikow...\n");
                 for(int i=0; i<2; i++) kill(pids_pracownicy[i], SIGUSR1);
                 break;
 
             case 3: // Stop Dostawcow
-                printf(">> Wysylam SIGUSR1 do Dostawcow...\n");
+                printf(">> Wysylam SIGUSR2 do Dostawcow...\n");
                 for(int i=0; i<4; i++) kill(pids_dostawcy[i], SIGUSR2);
                 break;
             

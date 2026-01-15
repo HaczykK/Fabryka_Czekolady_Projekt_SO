@@ -24,7 +24,7 @@ void inicjalizuj_magazyn(Magazyn* mag) {
     mag->head = 0;
     mag->tail = 0;
     mag->zajete = 0;
-    mag->fabryka_dziala = 1;
+    //mag->fabryka_dziala = 1;
     memset(mag->bufor, BAJT_PUSTY, MAGAZYN_POJEMNOSC);
 }
 
@@ -95,14 +95,14 @@ void wyswietl_stan_magazynu(Magazyn* mag) {
     printf("+--------------------------------------------+\n");
     printf("|          STAN MAGAZYNU (RING BUFFER)       |\n");
     printf("+--------------------------------------------+\n");
-    printf("|  Skladnik A: %3d szt. (%3d bajtow)          |\n", count_a, count_a * ROZMIAR_A);
-    printf("|  Skladnik B: %3d szt. (%3d bajtow)          |\n", count_b, count_b * ROZMIAR_B);
-    printf("|  Skladnik C: %3d szt. (%3d bajtow)          |\n", count_c, count_c * ROZMIAR_C);
-    printf("|  Skladnik D: %3d szt. (%3d bajtow)          |\n", count_d, count_d * ROZMIAR_D);
+    printf("|  Skladnik A: %3d szt. (%3d bajtow)         |\n", count_a, count_a * ROZMIAR_A);
+    printf("|  Skladnik B: %3d szt. (%3d bajtow)         |\n", count_b, count_b * ROZMIAR_B);
+    printf("|  Skladnik C: %3d szt. (%3d bajtow)         |\n", count_c, count_c * ROZMIAR_C);
+    printf("|  Skladnik D: %3d szt. (%3d bajtow)         |\n", count_d, count_d * ROZMIAR_D);
     printf("+--------------------------------------------+\n");
-    printf("|  Zajete: %4d / %4d bajtow                  |\n", mag->zajete, MAGAZYN_POJEMNOSC);
-    printf("|  Wolne:  %4d bajtow                        |\n", MAGAZYN_POJEMNOSC - mag->zajete);
-    printf("|  Head: %4d  Tail: %4d                     |\n", mag->head, mag->tail);
+    printf("|  Zajete: %4d / %4d bajtow                |\n", mag->zajete, MAGAZYN_POJEMNOSC);
+    printf("|  Wolne:  %4d bajtow                       |\n", MAGAZYN_POJEMNOSC - mag->zajete);
+    printf("|  Head: %4d  Tail: %4d                    |\n", mag->head, mag->tail);
     printf("+--------------------------------------------+\n");
     wizualizacja_bufora(mag);
     printf("\n");
@@ -293,7 +293,7 @@ int zapisz_stan_magazynu(Magazyn* mag, const char* plik) {
     int c = zlicz_skladnik(mag, BAJT_C) / ROZMIAR_C;
     int d = zlicz_skladnik(mag, BAJT_D) / ROZMIAR_D;
     
-    printf("[PLIK] Zapisano stan. Zajete: %d/%d (A:%d B:%d C:%d D:%d)\n", 
+    printf("[PLIK] Zapisano stan. Magazyn zajety: %d/%d (A:%d B:%d C:%d D:%d)\n", 
            mag->zajete, MAGAZYN_POJEMNOSC, a, b, c, d);
     return 0;
 }
@@ -345,18 +345,30 @@ int czy_istnieje_plik_stanu(const char* plik) {
 // Kolejki
 int utworz_kolejke() {
     int msg_id = msgget(KLUCZ_MSG, IPC_CREAT | 0600);
-    if (msg_id == -1) { perror("msgget utworz"); exit(EXIT_FAILURE); }
+    if (msg_id == -1) {
+        perror("msgget utworz");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("[MSG] Utworzono kolejke komunikatow (ID: %d)\n", msg_id);
+
     return msg_id;
 }
 
 int polacz_kolejke() {
     int msg_id = msgget(KLUCZ_MSG, 0);
-    if (msg_id == -1) { perror("msgget polacz"); exit(EXIT_FAILURE); }
+    if (msg_id == -1) { 
+        perror("msgget polacz"); 
+        exit(EXIT_FAILURE); 
+    }
+    
     return msg_id;
 }
 
 void usun_kolejke(int msg_id) {
     if (msg_id != -1) msgctl(msg_id, IPC_RMID, NULL);
+
+    printf("[MSG] Usunieto kolejke komunikatow (ID: %d)\n", msg_id);
 }
 
 // Funkcja do wysylania logow
