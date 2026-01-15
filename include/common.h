@@ -16,6 +16,13 @@
 #define ROZMIAR_C 2
 #define ROZMIAR_D 3
 
+// Bajty reprezentujace skladniki
+#define BAJT_A 'A'
+#define BAJT_B 'B'
+#define BAJT_C 'C'
+#define BAJT_D 'D'
+#define BAJT_PUSTY '.'
+
 // Klucze IPC
 #define SHM_KEY 0x1234
 #define SEM_KEY 0x5678
@@ -24,10 +31,10 @@
 // Indeksy semaforow
 #define SEM_MUTEX 0       // Mutex do ochrony magazynu
 #define SEM_WOLNE 1       // Liczba wolnych jednostek
-#define SEM_SKLAD_A 2           // Dostepnosc skladnika A
-#define SEM_SKLAD_B 3           // Dostepnosc skladnika B
-#define SEM_SKLAD_C 4           // Dostepnosc skladnika C
-#define SEM_SKLAD_D 5           // Dostepnosc skladnika D
+#define SEM_SKLAD_A 2     // Dostepnosc skladnika A
+#define SEM_SKLAD_B 3     // Dostepnosc skladnika B
+#define SEM_SKLAD_C 4     // Dostepnosc skladnika C
+#define SEM_SKLAD_D 5     // Dostepnosc skladnika D
 #define SEM_COUNT 6       // Laczna liczba semaforow
 
 typedef struct {
@@ -38,11 +45,13 @@ typedef struct {
 
 // Struktura magazynu 
 typedef struct {
-    int skladnik_A;
-    int skladnik_B;
-    int skladnik_C;
-    int skladnik_D;
-    int wolne_miejsce;
+    // Fizyczna taśma z bajtami
+    char bufor[MAGAZYN_POJEMNOSC];
+    
+    // Wskazniki pierscienia
+    int head;   // Gdzie piszemy (Dostawca)
+    int tail;   // Skad czytamy (Pracownik)
+    int zajete; // Liczba zajetych bajtow (count)
 } Magazyn;
 
 #endif

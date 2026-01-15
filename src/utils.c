@@ -20,15 +20,92 @@ union semun {
 
 
 
+void inicjalizuj_magazyn(Magazyn* mag) {
+    mag->head = 0;
+    mag->tail = 0;
+    mag->zajete = 0;
+    mag->fabryka_dziala = 1;
+    memset(mag->bufor, BAJT_PUSTY, MAGAZYN_POJEMNOSC);
+}
+
+// Funkcja pomocnicza: Zlicza ile razy wystepuje dany bajt w buforze
+int zlicz_skladnik(Magazyn* mag, char typ) {
+    int licznik = 0;
+    for (int i = 0; i < MAGAZYN_POJEMNOSC; i++) {
+        if (mag->bufor[i] == typ) {
+            licznik++;
+        }
+    }
+    return licznik;
+}
+
+// Wstawia bajty, nie nadpisujac innych (zeby nie nadpisac danych)
+int wstaw_do_bufora(Magazyn* mag, char typ, int rozmiar) {
+    // Sprawdzamy czy w ogole jest miejsce w liczniku
+    if (mag->zajete + rozmiar > MAGAZYN_POJEMNOSC) return 0; 
+
+    for (int i = 0; i < rozmiar; i++) {
+        // Szukamy najblizszej wolnego miejsca od head
+        while (mag->bufor[mag->head] != BAJT_PUSTY) {
+            mag->head = (mag->head + 1) % MAGAZYN_POJEMNOSC;
+        }
+
+        // Wstawiamy skladnik na wolne miejsce
+        mag->bufor[mag->head] = typ;
+        
+        // Przesuwamy head i licznik
+        mag->head = (mag->head + 1) % MAGAZYN_POJEMNOSC;
+        mag->zajete++;
+    }
+    return 1;
+}
+
+// Pobiera skladnik z ringu 
+int pobierz_z_bufora(Magazyn* mag, char typ, int rozmiar) {
+    int znaleziono = 0;
+
+    for (int i = 0; i < MAGAZYN_POJEMNOSC; i++) {
+        if (mag->bufor[i] == typ) {
+            mag->bufor[i] = BAJT_PUSTY; // Kasujemy fizycznie
+            mag->zajete--;
+            znaleziono++;
+            if (znaleziono == rozmiar) break;
+        }
+    }
+    return (znaleziono == rozmiar);
+}
+
+// Wyswietla jak wyglada ring
+void wizualizacja_bufora(Magazyn* m) {
+    printf("   Bufor [");
+    for (int i = 0; i < MAGAZYN_POJEMNOSC; i++) {
+        printf("%c", m->bufor[i]);
+    }
+    printf("]\n");
+}
+
+// Wyswietla stan magazynu
 void wyswietl_stan_magazynu(Magazyn* mag) {
-    printf("\n\n==========================\n");
-    printf("||----Stan magazynu-----||\n");
-    printf("||Skladnik A: %d         ||\n", mag->skladnik_A);
-    printf("||Skladnik B: %d         ||\n", mag->skladnik_B);
-    printf("||Skladnik C: %d         ||\n", mag->skladnik_C);
-    printf("||Skladnik D: %d         ||\n", mag->skladnik_D);
-    printf("||Wolne miejsce: %d/%d  ||\n", mag->wolne_miejsce, MAGAZYN_POJEMNOSC);
-    printf("==========================");
+    int count_a = zlicz_skladnik(mag, BAJT_A) / ROZMIAR_A;
+    int count_b = zlicz_skladnik(mag, BAJT_B) / ROZMIAR_B;
+    int count_c = zlicz_skladnik(mag, BAJT_C) / ROZMIAR_C;
+    int count_d = zlicz_skladnik(mag, BAJT_D) / ROZMIAR_D;
+
+    printf("\n");
+    printf("+--------------------------------------------+\n");
+    printf("|          STAN MAGAZYNU (RING BUFFER)       |\n");
+    printf("+--------------------------------------------+\n");
+    printf("|  Skladnik A: %3d szt. (%3d bajtow)          |\n", count_a, count_a * ROZMIAR_A);
+    printf("|  Skladnik B: %3d szt. (%3d bajtow)          |\n", count_b, count_b * ROZMIAR_B);
+    printf("|  Skladnik C: %3d szt. (%3d bajtow)          |\n", count_c, count_c * ROZMIAR_C);
+    printf("|  Skladnik D: %3d szt. (%3d bajtow)          |\n", count_d, count_d * ROZMIAR_D);
+    printf("+--------------------------------------------+\n");
+    printf("|  Zajete: %4d / %4d bajtow                  |\n", mag->zajete, MAGAZYN_POJEMNOSC);
+    printf("|  Wolne:  %4d bajtow                        |\n", MAGAZYN_POJEMNOSC - mag->zajete);
+    printf("|  Head: %4d  Tail: %4d                     |\n", mag->head, mag->tail);
+    printf("+--------------------------------------------+\n");
+    wizualizacja_bufora(mag);
+    printf("\n");
 }
 
 // Pamiec dzielona
@@ -110,40 +187,18 @@ void inicjalizuj_semafory(int sem_id) {
     
     // Semafory skladnikow - na poczatku 0 (brak skladnikow)
     arg.val = 0;
-    for (int i = SEM_SKLAD_A; i <= SEM_SKLAD_D; i++) {
-        if (semctl(sem_id, i, SETVAL, arg) == -1) {
-            perror("semctl skladniki");
-            exit(EXIT_FAILURE);
-        }
-    }
-    
-    printf("[SEM] Semafory zainicjalizowane:\n");
-    printf("      MUTEX=%d, WOLNE=%d, A=%d, B=%d, C=%d, D=%d\n",
-           1, MAGAZYN_POJEMNOSC, 0, 0, 0, 0);
+    for(int i=SEM_SKLAD_A; i<=SEM_SKLAD_D; i++) semctl(sem_id, i, SETVAL, arg);
 }
 
 void zaktualizuj_semafory(int sem_id, Magazyn* mag) {
     union semun arg;
-
-    // 1. Aktualizuj WOLNE miejsce
-    arg.val = mag->wolne_miejsce;
+    arg.val = MAGAZYN_POJEMNOSC - mag->zajete; 
     semctl(sem_id, SEM_WOLNE, SETVAL, arg);
-    
-    // 2. Aktualizuj stany skladnikow (zeby pracownicy wiedzieli ze cos jest)
-    arg.val = mag->skladnik_A;
-    semctl(sem_id, SEM_SKLAD_A, SETVAL, arg);
-    
-    arg.val = mag->skladnik_B;
-    semctl(sem_id, SEM_SKLAD_B, SETVAL, arg);
-    
-    arg.val = mag->skladnik_C;
-    semctl(sem_id, SEM_SKLAD_C, SETVAL, arg);
-    
-    arg.val = mag->skladnik_D;
-    semctl(sem_id, SEM_SKLAD_D, SETVAL, arg);
-    
-    printf("[DYREKTOR] Semafory zsynchronizowane (Wolne=%d, A=%d, B=%d, C=%d, D=%d)\n",
-           mag->wolne_miejsce, mag->skladnik_A, mag->skladnik_B, mag->skladnik_C, mag->skladnik_D);
+
+    arg.val = zlicz_skladnik(mag, BAJT_A) / ROZMIAR_A; semctl(sem_id, SEM_SKLAD_A, SETVAL, arg);
+    arg.val = zlicz_skladnik(mag, BAJT_B) / ROZMIAR_B; semctl(sem_id, SEM_SKLAD_B, SETVAL, arg);
+    arg.val = zlicz_skladnik(mag, BAJT_C) / ROZMIAR_C; semctl(sem_id, SEM_SKLAD_C, SETVAL, arg);
+    arg.val = zlicz_skladnik(mag, BAJT_D) / ROZMIAR_D; semctl(sem_id, SEM_SKLAD_D, SETVAL, arg);
 }
 
 void usun_semafory(int sem_id) {
@@ -232,12 +287,14 @@ int zapisz_stan_magazynu(Magazyn* mag, const char* plik) {
         return -1;
     }
     
-    printf("[PLIK] Zapisano stan magazynu do: %s\n", plik);
-    printf("       A=%d B=%d C=%d D=%d Wolne=%d\n", 
-           mag->skladnik_A, mag->skladnik_B, 
-           mag->skladnik_C, mag->skladnik_D, 
-           mag->wolne_miejsce);
+    // Obliczamy ilosci do wyswietlenia
+    int a = zlicz_skladnik(mag, BAJT_A) / ROZMIAR_A;
+    int b = zlicz_skladnik(mag, BAJT_B) / ROZMIAR_B;
+    int c = zlicz_skladnik(mag, BAJT_C) / ROZMIAR_C;
+    int d = zlicz_skladnik(mag, BAJT_D) / ROZMIAR_D;
     
+    printf("[PLIK] Zapisano stan. Zajete: %d/%d (A:%d B:%d C:%d D:%d)\n", 
+           mag->zajete, MAGAZYN_POJEMNOSC, a, b, c, d);
     return 0;
 }
 
@@ -255,12 +312,23 @@ int odczytaj_stan_magazynu(Magazyn* mag, const char* plik) {
         return -1;
     }
     
-    printf("[PLIK] Odczytano stan magazynu z: %s\n", plik);
-    printf("       A=%d B=%d C=%d D=%d Wolne=%d\n", 
-           mag->skladnik_A, mag->skladnik_B, 
-           mag->skladnik_C, mag->skladnik_D, 
-           mag->wolne_miejsce);
-    
+    int faktycznie_zajete = 0;
+        for(int i=0; i<MAGAZYN_POJEMNOSC; i++) {
+            if (mag->bufor[i] != BAJT_PUSTY) {
+                faktycznie_zajete++;
+            }
+        }
+        
+        // Jeśli jest rozbieżność, naprawiamy!
+        if (mag->zajete != faktycznie_zajete) {
+            printf("[FIX] Wykryto blad danych! Plik twierdzil %d, a fizycznie jest %d.\n", 
+                   mag->zajete, faktycznie_zajete);
+            printf("[FIX] Naprawiam licznik zajete...\n");
+            mag->zajete = faktycznie_zajete;
+        }
+
+        printf("[PLIK] Odczytano i zweryfikowano stan. Zajete: %d/%d\n", 
+               mag->zajete, MAGAZYN_POJEMNOSC);
     return 0;
 }
 

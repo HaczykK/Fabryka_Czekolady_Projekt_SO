@@ -3,7 +3,14 @@
 
 #include "common.h"
 
+// Funkcje dla Magazynu (Ring buffer)
+void inicjalizuj_magazyn(Magazyn* mag);
+int zlicz_skladnik(Magazyn* mag, char typ); // Pomocnicza do statystyk
+int wstaw_do_bufora(Magazyn* mag, char typ, int rozmiar);
+int pobierz_z_bufora(Magazyn* mag, char typ, int rozmiar);
+
 // Wyswietlanie stanu magazynu
+void wizualizacja_bufora(Magazyn* mag);
 void wyswietl_stan_magazynu(Magazyn* mag);
 
 // Pamiec dzielona
