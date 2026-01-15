@@ -141,7 +141,7 @@ void odlacz_pamiec_dzielona(Magazyn* mag) {
         exit(EXIT_FAILURE);
     }
 
-    printf("[SHM] Odloczono od pamieci dzielonej");
+    printf("[SHM] Odloczono od pamieci dzielonej\n");
 }
 
 void usun_pamiec_dzielona(int shm_id) {
@@ -341,6 +341,8 @@ int czy_istnieje_plik_stanu(const char* plik) {
     return 1;  // Istnieje
 }
 
+
+// Kolejki
 int utworz_kolejke() {
     int msg_id = msgget(KLUCZ_MSG, IPC_CREAT | 0600);
     if (msg_id == -1) { perror("msgget utworz"); exit(EXIT_FAILURE); }

@@ -15,36 +15,38 @@ void handle_signal(int sig) {
 }
 
 
-int czy_bezpiecznie_dostarczyc(Magazyn* m, char typ, int rozmiar) {
-    int wolne = m->wolne_miejsce - rozmiar;
-
-    // Opcja 1 (mniej niż 15 miejsc) -> Blokujemy C i D 
+int czy_bezpiecznie(int sem_id, int wolne, char typ) {
+    // 1 opcja: malo miejsca (<15) - Blokujemy skladniki ktore zajmujace 2 i 3 bajty (C i D)
     if (wolne < 15) {
-        if (typ == 'C' || typ == 'D') {
-            // Wpuszczamy C lub D WYJĄTKOWO tylko jak ich w ogóle nie ma (stan 0)
-            if (typ == 'C' && m->skladnik_C == 0) return 1;
-            if (typ == 'D' && m->skladnik_D == 0) return 1;
-            return 0;
-        }
+        int cnt_c = sem_getval(sem_id, SEM_SKLAD_C);
+        int cnt_d = sem_getval(sem_id, SEM_SKLAD_D);
+        
+        // Jesli jest juz jakies C lub D, to nie dokladaj kolejnych
+        if ((typ == 'C' && cnt_c > 0) || (typ == 'D' && cnt_d > 0)) return 0;
     }
 
-    // Opcja 2 (mniej niż 5 miejsc) -> Wpuszczamy tylko skladnik ktorego nam brakuje do produkcji
+    // 2 opcja: bardzo malo miejsca (<5) - tylko braki
     if (wolne < 5) {
-        // Wpuszczamy TYLKO ten składnik, którego brakuje do zera
-        if (typ == 'A' && m->skladnik_A == 0) return 1;
-        if (typ == 'B' && m->skladnik_B == 0) return 1;
-        if (typ == 'C' && m->skladnik_C == 0) return 1;
-        if (typ == 'D' && m->skladnik_D == 0) return 1;
+        int val = 0;
+        if (typ == 'A') val = sem_getval(sem_id, SEM_SKLAD_A);
+        if (typ == 'B') val = sem_getval(sem_id, SEM_SKLAD_B);
+        if (typ == 'C') val = sem_getval(sem_id, SEM_SKLAD_C);
+        if (typ == 'D') val = sem_getval(sem_id, SEM_SKLAD_D);
         
+        // Wpuszczamy tylko jesli tego skladnika calkowicie brakuje
+        if (val == 0) return 1;
         return 0;
     }
 
-    // Opcja: Limit nadprodukcji (zeby nie zapchać jednym typem)
+    // 3 opcja limit nadprodukcji (zeby nie zapchac magazynu samym A)
     int limit = 20;
-    if (typ == 'A' && m->skladnik_A > limit) return 0;
-    if (typ == 'B' && m->skladnik_B > limit) return 0;
-    if (typ == 'C' && m->skladnik_C > limit) return 0;
-    if (typ == 'D' && m->skladnik_D > limit) return 0;
+    int val = 0;
+    if (typ == 'A') val = sem_getval(sem_id, SEM_SKLAD_A);
+    if (typ == 'B') val = sem_getval(sem_id, SEM_SKLAD_B);
+    if (typ == 'C') val = sem_getval(sem_id, SEM_SKLAD_C);
+    if (typ == 'D') val = sem_getval(sem_id, SEM_SKLAD_D);
+    
+    if (val > limit) return 0;
 
     return 1;
 }
@@ -84,7 +86,7 @@ int main(int argc, char *argv[]) {
 
 
     int shm_id = polacz_magazyn_z_pamiecia_dzielona();
-    Magazyn* magazyn = polacz_z_pamiecia_dzielona(shm_id);
+    Magazyn* mag = polacz_z_pamiecia_dzielona(shm_id);
     int sem_id = polacz_semafory();
     int msg_id = polacz_kolejke();
 
@@ -107,47 +109,26 @@ int main(int argc, char *argv[]) {
 
         sem_wait(sem_id, SEM_MUTEX);
 
-        if (!czy_bezpiecznie_dostarczyc(magazyn, skladnik, rozmiar)) {
-            // Jesli jest niebezpiecznie (ryzyko zapchania):
-            
-            // Wychodzimy z magazynu
+        // Sprawdzamy bezpieczenstwo (ile zajete = pojemnosc - wolne)
+        int wolne_fizycznie = MAGAZYN_POJEMNOSC - mag->zajete;
+        
+        if (!czy_bezpiecznie(sem_id, wolne_fizycznie, skladnik)) {
+            // Wycofujemy sie
             sem_signal(sem_id, SEM_MUTEX);
-            
-            // Ooddajemy miejsce ktore zarezerwowalismy
-            for(int k=0; k<potrzebne_miejsce; k++) {
-                sem_signal(sem_id, SEM_WOLNE);
-            }
-            
-            // Czekamy chwilę i próbujemy od nowa pętli
+            for(int k=0; k<potrzebne_miejsce; k++) sem_signal(sem_id, SEM_WOLNE);
             usleep(200000); 
-            continue; 
+            continue;
+        }
+
+        for (int k=0; k<ilosc; k++) {
+            wstaw_do_bufora(mag, skladnik, rozmiar);
         }
         
 
-        switch(skladnik) {
-            case 'A': 
-                magazyn->skladnik_A += ilosc;
-                break;
-            case 'B': 
-                magazyn->skladnik_B += ilosc; 
-                break;
-            case 'C': 
-                magazyn->skladnik_C += ilosc; 
-                break;
-            case 'D': 
-                magazyn->skladnik_D += ilosc; 
-                break;
-        }
+        sprintf(log_buf, "[DOSTAWCA-%c] Dostarczono %d x %c | Magazyn zajety: %d/%d |", 
+                skladnik, ilosc, skladnik, mag->zajete, MAGAZYN_POJEMNOSC);
+        wyslij_log(msg_id, log_buf);       
         
-        magazyn->wolne_miejsce -= potrzebne_miejsce;
-        
-        sprintf(log_buf, "[DOSTAWCA-%c] Dostarczono %d x %c | Magazyn: A=%d B=%d C=%d D=%d | Wolne:%d/%d\n",
-               skladnik, ilosc, skladnik,
-               magazyn->skladnik_A, magazyn->skladnik_B,
-               magazyn->skladnik_C, magazyn->skladnik_D,
-               magazyn->wolne_miejsce, MAGAZYN_POJEMNOSC);
-        
-        wyslij_log(msg_id, log_buf);
 
         sem_signal(sem_id, SEM_MUTEX);
         
@@ -156,8 +137,8 @@ int main(int argc, char *argv[]) {
         sleep((rand() % 3) + 1);
     }
     
-    sprintf(log_buf, "[DOSTAWCA-%c] Koniec pracy.\n", skladnik);
+    sprintf(log_buf, "[DOSTAWCA-%c] Koniec pracy |\n", skladnik);
     wyslij_log(msg_id, log_buf);
-    odlacz_pamiec_dzielona(magazyn);
+    odlacz_pamiec_dzielona(mag);
     return 0;
 }
