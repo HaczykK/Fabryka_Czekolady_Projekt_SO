@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     
 
     int shm_id = polacz_magazyn_z_pamiecia_dzielona();
-    Magazyn* magazyn = polacz_z_pamiecia_dzielona(shm_id);
+    Magazyn* mag = polacz_z_pamiecia_dzielona(shm_id);
     int sem_id = polacz_semafory();
     int msg_id = polacz_kolejke();
    
@@ -52,34 +52,26 @@ int main(int argc, char *argv[]) {
 
         sem_wait(sem_id, SEM_MUTEX);
         
-        magazyn->skladnik_A -= 1;
-        magazyn->skladnik_B -= 1;
-
-        int zwolnione_miejsce = ROZMIAR_A + ROZMIAR_B;
+       // Odczyt z ringu
+        pobierz_z_bufora(mag, BAJT_A, ROZMIAR_A);
+        pobierz_z_bufora(mag, BAJT_B, ROZMIAR_B);
         
         if (stanowisko == 1) {
-            magazyn->skladnik_C -= 1;
-            zwolnione_miejsce += ROZMIAR_C;
+            pobierz_z_bufora(mag, BAJT_C, ROZMIAR_C);
         } else {
-            magazyn->skladnik_D -= 1;
-            zwolnione_miejsce += ROZMIAR_D;
-}
-        
-        magazyn->wolne_miejsce += zwolnione_miejsce;
-        
-        sprintf(log_buf, "[PRACOWNIK-%d] Pobrano skladniki | Magazyn: A=%d B=%d C=%d D=%d | Wolne:%d/%d|\n",
-                stanowisko,
-                magazyn->skladnik_A, magazyn->skladnik_B,
-                magazyn->skladnik_C, magazyn->skladnik_D,
-                magazyn->wolne_miejsce, MAGAZYN_POJEMNOSC);
-        
+            pobierz_z_bufora(mag, BAJT_D, ROZMIAR_D);
+        }
+
+        sprintf(log_buf, "[PRACOWNIK-%d] Pobranno skladniki | Magazyn zajety: %d/%d |", 
+                stanowisko, mag->zajete, MAGAZYN_POJEMNOSC);
 
         wyslij_log(msg_id, log_buf);
 
         sem_signal(sem_id, SEM_MUTEX);
         
         // Zwolnij miejsce (Sygnal WOLNE)
-        for(int i=0; i<zwolnione_miejsce; i++) sem_signal(sem_id, SEM_WOLNE);
+        int zwolnione = ROZMIAR_A + ROZMIAR_B + ((stanowisko==1)?ROZMIAR_C:ROZMIAR_D);
+        for(int k=0; k<zwolnione; k++) sem_signal(sem_id, SEM_WOLNE);
 
         // Produkcja
         sleep((rand() % 2) + 1);
@@ -88,8 +80,8 @@ int main(int argc, char *argv[]) {
         wyslij_log(msg_id, log_buf);
     }
 
-    sprintf(log_buf, "[PRACOWNIK-%d] Koniec. Wyprodukowano: %d czekolady %s\n", stanowisko, wyprodukowano,typ_czekolady);
+    sprintf(log_buf, "[PRACOWNIK-%d] Koniec. Wyprodukowano: %d czekolady %s\n", stanowisko, wyprodukowano, typ_czekolady);
     wyslij_log(msg_id, log_buf);
-    odlacz_pamiec_dzielona(magazyn);
+    odlacz_pamiec_dzielona(mag);
     return 0;
 }
