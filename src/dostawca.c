@@ -101,22 +101,22 @@ int main(int argc, char *argv[]) {
         int ilosc = (rand() % 2) + 1; // Male porcje (1-2)
         int potrzebne_miejsce = ilosc * rozmiar;
         
-        for (int j = 0; j < potrzebne_miejsce; j++) {
-            sem_wait(sem_id, SEM_WOLNE);
-            if (!running) break;
-        }
-        if (!running) break;
-
         sem_wait(sem_id, SEM_MUTEX);
-
-        // Sprawdzamy bezpieczenstwo (ile zajete = pojemnosc - wolne)
-        int wolne_fizycznie = MAGAZYN_POJEMNOSC - mag->zajete;
-        
-        if (!czy_bezpiecznie(sem_id, wolne_fizycznie, skladnik)) {
-            // Wycofujemy sie
+        if (!running) {
             sem_signal(sem_id, SEM_MUTEX);
-            for(int k=0; k<potrzebne_miejsce; k++) sem_signal(sem_id, SEM_WOLNE);
-            usleep(200000); 
+            break;
+        }
+
+        int wolne_fizycznie = MAGAZYN_POJEMNOSC - mag->zajete;
+        if (wolne_fizycznie < potrzebne_miejsce) {
+            sem_signal(sem_id, SEM_MUTEX);
+            //usleep(100000); // Krótka przerwa
+            continue;
+        }
+
+        if (!czy_bezpiecznie(sem_id, wolne_fizycznie, skladnik)) {
+            sem_signal(sem_id, SEM_MUTEX);
+            //usleep(100000);
             continue;
         }
 
@@ -124,17 +124,17 @@ int main(int argc, char *argv[]) {
             wstaw_do_bufora(mag, skladnik, rozmiar);
         }
         
-
         sprintf(log_buf, "[DOSTAWCA-%c] Dostarczono %d x %c | Magazyn zajety: %d/%d |", 
                 skladnik, ilosc, skladnik, mag->zajete, MAGAZYN_POJEMNOSC);
-        wyslij_log(msg_id, log_buf);       
-        
+        wyslij_log(msg_id, log_buf);
 
         sem_signal(sem_id, SEM_MUTEX);
         
-        for (int j = 0; j < ilosc; j++) sem_signal(sem_id, sem_skladnik);
+        for (int j = 0; j < ilosc; j++) {
+            sem_signal(sem_id, sem_skladnik);
+        }
         
-        sleep((rand() % 3) + 1);
+        //sleep((rand() % 3) + 1);
     }
     
     sprintf(log_buf, "[DOSTAWCA-%c] Koniec pracy |\n", skladnik);

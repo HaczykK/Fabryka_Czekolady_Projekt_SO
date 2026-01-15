@@ -68,13 +68,9 @@ int main(int argc, char *argv[]) {
         wyslij_log(msg_id, log_buf);
 
         sem_signal(sem_id, SEM_MUTEX);
-        
-        // Zwolnij miejsce (Sygnal WOLNE)
-        int zwolnione = ROZMIAR_A + ROZMIAR_B + ((stanowisko==1)?ROZMIAR_C:ROZMIAR_D);
-        for(int k=0; k<zwolnione; k++) sem_signal(sem_id, SEM_WOLNE);
 
         // Produkcja
-        sleep((rand() % 2) + 1);
+        //sleep((rand() % 2) + 1);
         wyprodukowano++;
         sprintf(log_buf, "[PRACOWNIK-%d] *** WYPRODUKOWANO CZEKOLADE - %s  #%d ***\n", stanowisko, typ_czekolady, wyprodukowano);
         wyslij_log(msg_id, log_buf);

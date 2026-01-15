@@ -9,13 +9,13 @@
 #include "common.h"
 #include "utils.h"
 
-
-
+#if defined(__linux__)
 union semun {
     int val;
     struct semid_ds *buf;
     unsigned short *array;
 };
+#endif
 
 
 
