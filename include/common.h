@@ -43,15 +43,24 @@ typedef struct {
 } Komunikat;
 
 
-// Struktura magazynu 
+// Pojemnosc kolejek per skladnik (~25% kazdej)
+#define KOLEJKA_POJEMNOSC 12
+
+// Ring buffer FIFO dla pojedynczego typu skladnika
 typedef struct {
-    // Fizyczna taśma z bajtami
-    char bufor[MAGAZYN_POJEMNOSC];
+    int head;       // Indeks do wstawiania
+    int tail;       // Indeks do pobierania
+    int count;      // Liczba elementow w kolejce
+} RingQueue;
+
+// Struktura magazynu - osobne kolejki FIFO per skladnik
+typedef struct {
+    RingQueue kolejka_A;
+    RingQueue kolejka_B;
+    RingQueue kolejka_C;
+    RingQueue kolejka_D;
     
-    // Wskazniki pierscienia
-    int head;   // Gdzie piszemy (Dostawca)
-    int tail;   // Skad czytamy (Pracownik)
-    int zajete; // Liczba zajetych bajtow (count)
+    int suma_bajtow;  // Laczna liczba zajetych bajtow (dla limitu MAGAZYN_POJEMNOSC)
 } Magazyn;
 
 #endif

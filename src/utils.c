@@ -9,87 +9,120 @@
 #include "common.h"
 #include "utils.h"
 
-#if defined(__linux__)
+//#if defined(__linux__)
 union semun {
     int val;
     struct semid_ds *buf;
     unsigned short *array;
 };
-#endif
+//#endif
 
 
 
+
+// Inicjalizacja pojedynczej kolejki FIFO
+void inicjalizuj_kolejke(RingQueue* q) {
+    q->head = 0;
+    q->tail = 0;
+    q->count = 0;
+}
 
 void inicjalizuj_magazyn(Magazyn* mag) {
-    mag->head = 0;
-    mag->tail = 0;
-    mag->zajete = 0;
-    //mag->fabryka_dziala = 1;
-    memset(mag->bufor, BAJT_PUSTY, MAGAZYN_POJEMNOSC);
+    inicjalizuj_kolejke(&mag->kolejka_A);
+    inicjalizuj_kolejke(&mag->kolejka_B);
+    inicjalizuj_kolejke(&mag->kolejka_C);
+    inicjalizuj_kolejke(&mag->kolejka_D);
+    mag->suma_bajtow = 0;
 }
 
-// Funkcja pomocnicza: Zlicza ile razy wystepuje dany bajt w buforze
-int zlicz_skladnik(Magazyn* mag, char typ) {
-    int licznik = 0;
-    for (int i = 0; i < MAGAZYN_POJEMNOSC; i++) {
-        if (mag->bufor[i] == typ) {
-            licznik++;
-        }
+// Pomocnicza: zwraca wskaznik do kolejki dla danego typu skladnika
+RingQueue* pobierz_kolejke(Magazyn* mag, char typ) {
+    switch(typ) {
+        case BAJT_A: return &mag->kolejka_A;
+        case BAJT_B: return &mag->kolejka_B;
+        case BAJT_C: return &mag->kolejka_C;
+        case BAJT_D: return &mag->kolejka_D;
+        default: return NULL;
     }
-    return licznik;
 }
 
-// Wstawia bajty, nie nadpisujac innych (zeby nie nadpisac danych)
-int wstaw_do_bufora(Magazyn* mag, char typ, int rozmiar) {
-    // Sprawdzamy czy w ogole jest miejsce w liczniku
-    if (mag->zajete + rozmiar > MAGAZYN_POJEMNOSC) return 0; 
-
-    for (int i = 0; i < rozmiar; i++) {
-        // Szukamy najblizszej wolnego miejsca od head
-        while (mag->bufor[mag->head] != BAJT_PUSTY) {
-            mag->head = (mag->head + 1) % MAGAZYN_POJEMNOSC;
-        }
-
-        // Wstawiamy skladnik na wolne miejsce
-        mag->bufor[mag->head] = typ;
-        
-        // Przesuwamy head i licznik
-        mag->head = (mag->head + 1) % MAGAZYN_POJEMNOSC;
-        mag->zajete++;
+// Pomocnicza: zwraca rozmiar skladnika
+int rozmiar_skladnika(char typ) {
+    switch(typ) {
+        case BAJT_A: return ROZMIAR_A;
+        case BAJT_B: return ROZMIAR_B;
+        case BAJT_C: return ROZMIAR_C;
+        case BAJT_D: return ROZMIAR_D;
+        default: return 0;
     }
+}
+
+// Sprawdza czy mozna wstawic skladnik do magazynu
+int czy_mozna_wstawic(Magazyn* mag, char typ) {
+    RingQueue* q = pobierz_kolejke(mag, typ);
+    if (q == NULL) return 0;
+    
+    int rozmiar = rozmiar_skladnika(typ);
+    
+    // Sprawdz limit kolejki
+    if (q->count >= KOLEJKA_POJEMNOSC) return 0;
+    
+    // Sprawdz limit calkowitej pojemnosci magazynu
+    if (mag->suma_bajtow + rozmiar > MAGAZYN_POJEMNOSC) return 0;
+    
     return 1;
 }
 
-// Pobiera skladnik z ringu 
-int pobierz_z_bufora(Magazyn* mag, char typ, int rozmiar) {
-    int znaleziono = 0;
-
-    for (int i = 0; i < MAGAZYN_POJEMNOSC; i++) {
-        if (mag->bufor[i] == typ) {
-            mag->bufor[i] = BAJT_PUSTY; // Kasujemy fizycznie
-            mag->zajete--;
-            znaleziono++;
-            if (znaleziono == rozmiar) break;
-        }
-    }
-    return (znaleziono == rozmiar);
+// Wstawia skladnik do odpowiedniej kolejki FIFO (prawdziwy ring buffer)
+int wstaw_do_kolejki(Magazyn* mag, char typ) {
+    RingQueue* q = pobierz_kolejke(mag, typ);
+    if (q == NULL) return 0;
+    
+    int rozmiar = rozmiar_skladnika(typ);
+    
+    // Sprawdz limity
+    if (q->count >= KOLEJKA_POJEMNOSC) return 0;
+    if (mag->suma_bajtow + rozmiar > MAGAZYN_POJEMNOSC) return 0;
+    
+    // Wstaw na head (FIFO - wstawiamy na koniec)
+    q->head = (q->head + 1) % KOLEJKA_POJEMNOSC;
+    q->count++;
+    mag->suma_bajtow += rozmiar;
+    
+    return 1;
 }
 
-// Wyswietla jak wyglada ring
-void wizualizacja_bufora(Magazyn* m) {
-    printf("   Bufor [");
-    for (int i = 0; i < MAGAZYN_POJEMNOSC; i++) {
-        printf("%c", m->bufor[i]);
-    }
-    printf("]\n");
+// Pobiera skladnik z odpowiedniej kolejki FIFO (prawdziwy ring buffer)
+int pobierz_z_kolejki(Magazyn* mag, char typ) {
+    RingQueue* q = pobierz_kolejke(mag, typ);
+    if (q == NULL) return 0;
+    
+    // Sprawdz czy jest co pobrac
+    if (q->count <= 0) return 0;
+    
+    int rozmiar = rozmiar_skladnika(typ);
+    
+    // Pobierz z tail (FIFO - pobieramy z poczatku)
+    q->tail = (q->tail + 1) % KOLEJKA_POJEMNOSC;
+    q->count--;
+    mag->suma_bajtow -= rozmiar;
+    
+    return 1;
+}
+
+// Zwraca liczbe skladnikow danego typu w magazynie
+int zlicz_skladnik(Magazyn* mag, char typ) {
+    RingQueue* q = pobierz_kolejke(mag, typ);
+    if (q == NULL) return 0;
+    return q->count;
 }
 
 // Wyswietla stan magazynu
 void wyswietl_stan_magazynu(Magazyn* mag) {
-    int count_a = zlicz_skladnik(mag, BAJT_A) / ROZMIAR_A;
-    int count_b = zlicz_skladnik(mag, BAJT_B) / ROZMIAR_B;
-    int count_c = zlicz_skladnik(mag, BAJT_C) / ROZMIAR_C;
-    int count_d = zlicz_skladnik(mag, BAJT_D) / ROZMIAR_D;
+    int count_a = mag->kolejka_A.count;
+    int count_b = mag->kolejka_B.count;
+    int count_c = mag->kolejka_C.count;
+    int count_d = mag->kolejka_D.count;
 
     printf("\n");
     printf("+--------------------------------------------+\n");
@@ -100,11 +133,9 @@ void wyswietl_stan_magazynu(Magazyn* mag) {
     printf("|  Skladnik C: %3d szt. (%3d bajtow)         |\n", count_c, count_c * ROZMIAR_C);
     printf("|  Skladnik D: %3d szt. (%3d bajtow)         |\n", count_d, count_d * ROZMIAR_D);
     printf("+--------------------------------------------+\n");
-    printf("|  Zajete: %4d / %4d bajtow                |\n", mag->zajete, MAGAZYN_POJEMNOSC);
-    printf("|  Wolne:  %4d bajtow                       |\n", MAGAZYN_POJEMNOSC - mag->zajete);
-    printf("|  Head: %4d  Tail: %4d                    |\n", mag->head, mag->tail);
+    printf("|  Zajete: %4d / %4d bajtow                |\n", mag->suma_bajtow, MAGAZYN_POJEMNOSC);
+    printf("|  Wolne:  %4d bajtow                       |\n", MAGAZYN_POJEMNOSC - mag->suma_bajtow);
     printf("+--------------------------------------------+\n");
-    wizualizacja_bufora(mag);
     printf("\n");
 }
 
@@ -192,13 +223,13 @@ void inicjalizuj_semafory(int sem_id) {
 
 void zaktualizuj_semafory(int sem_id, Magazyn* mag) {
     union semun arg;
-    arg.val = MAGAZYN_POJEMNOSC - mag->zajete; 
+    arg.val = MAGAZYN_POJEMNOSC - mag->suma_bajtow; 
     semctl(sem_id, SEM_WOLNE, SETVAL, arg);
 
-    arg.val = zlicz_skladnik(mag, BAJT_A) / ROZMIAR_A; semctl(sem_id, SEM_SKLAD_A, SETVAL, arg);
-    arg.val = zlicz_skladnik(mag, BAJT_B) / ROZMIAR_B; semctl(sem_id, SEM_SKLAD_B, SETVAL, arg);
-    arg.val = zlicz_skladnik(mag, BAJT_C) / ROZMIAR_C; semctl(sem_id, SEM_SKLAD_C, SETVAL, arg);
-    arg.val = zlicz_skladnik(mag, BAJT_D) / ROZMIAR_D; semctl(sem_id, SEM_SKLAD_D, SETVAL, arg);
+    arg.val = mag->kolejka_A.count; semctl(sem_id, SEM_SKLAD_A, SETVAL, arg);
+    arg.val = mag->kolejka_B.count; semctl(sem_id, SEM_SKLAD_B, SETVAL, arg);
+    arg.val = mag->kolejka_C.count; semctl(sem_id, SEM_SKLAD_C, SETVAL, arg);
+    arg.val = mag->kolejka_D.count; semctl(sem_id, SEM_SKLAD_D, SETVAL, arg);
 }
 
 void usun_semafory(int sem_id) {
@@ -287,14 +318,10 @@ int zapisz_stan_magazynu(Magazyn* mag, const char* plik) {
         return -1;
     }
     
-    // Obliczamy ilosci do wyswietlenia
-    int a = zlicz_skladnik(mag, BAJT_A) / ROZMIAR_A;
-    int b = zlicz_skladnik(mag, BAJT_B) / ROZMIAR_B;
-    int c = zlicz_skladnik(mag, BAJT_C) / ROZMIAR_C;
-    int d = zlicz_skladnik(mag, BAJT_D) / ROZMIAR_D;
-    
     printf("[PLIK] Zapisano stan. Magazyn zajety: %d/%d (A:%d B:%d C:%d D:%d)\n", 
-           mag->zajete, MAGAZYN_POJEMNOSC, a, b, c, d);
+           mag->suma_bajtow, MAGAZYN_POJEMNOSC, 
+           mag->kolejka_A.count, mag->kolejka_B.count, 
+           mag->kolejka_C.count, mag->kolejka_D.count);
     return 0;
 }
 
@@ -312,23 +339,22 @@ int odczytaj_stan_magazynu(Magazyn* mag, const char* plik) {
         return -1;
     }
     
-    int faktycznie_zajete = 0;
-        for(int i=0; i<MAGAZYN_POJEMNOSC; i++) {
-            if (mag->bufor[i] != BAJT_PUSTY) {
-                faktycznie_zajete++;
-            }
-        }
-        
-        // Jeśli jest rozbieżność, naprawiamy!
-        if (mag->zajete != faktycznie_zajete) {
-            printf("[FIX] Wykryto blad danych! Plik twierdzil %d, a fizycznie jest %d.\n", 
-                   mag->zajete, faktycznie_zajete);
-            printf("[FIX] Naprawiam licznik zajete...\n");
-            mag->zajete = faktycznie_zajete;
-        }
+    // Weryfikacja spojnosci danych
+    int faktycznie_zajete = 
+        mag->kolejka_A.count * ROZMIAR_A +
+        mag->kolejka_B.count * ROZMIAR_B +
+        mag->kolejka_C.count * ROZMIAR_C +
+        mag->kolejka_D.count * ROZMIAR_D;
+    
+    if (mag->suma_bajtow != faktycznie_zajete) {
+        printf("[FIX] Wykryto blad danych! Plik twierdzil %d, a suma kolejek to %d.\n", 
+               mag->suma_bajtow, faktycznie_zajete);
+        printf("[FIX] Naprawiam licznik suma_bajtow...\n");
+        mag->suma_bajtow = faktycznie_zajete;
+    }
 
-        printf("[PLIK] Odczytano i zweryfikowano stan. Zajete: %d/%d\n", 
-               mag->zajete, MAGAZYN_POJEMNOSC);
+    printf("[PLIK] Odczytano i zweryfikowano stan. Zajete: %d/%d\n", 
+           mag->suma_bajtow, MAGAZYN_POJEMNOSC);
     return 0;
 }
 

@@ -3,14 +3,19 @@
 
 #include "common.h"
 
-// Funkcje dla Magazynu (Ring buffer)
+// Funkcje dla Ring Queue (FIFO per skladnik)
+void inicjalizuj_kolejke(RingQueue* q);
 void inicjalizuj_magazyn(Magazyn* mag);
-int zlicz_skladnik(Magazyn* mag, char typ); // Pomocnicza do statystyk
-int wstaw_do_bufora(Magazyn* mag, char typ, int rozmiar);
-int pobierz_z_bufora(Magazyn* mag, char typ, int rozmiar);
+
+// Operacje na kolejkach skladnikow
+RingQueue* pobierz_kolejke(Magazyn* mag, char typ);
+int rozmiar_skladnika(char typ);
+int czy_mozna_wstawic(Magazyn* mag, char typ);
+int wstaw_do_kolejki(Magazyn* mag, char typ);
+int pobierz_z_kolejki(Magazyn* mag, char typ);
+int zlicz_skladnik(Magazyn* mag, char typ);
 
 // Wyswietlanie stanu magazynu
-void wizualizacja_bufora(Magazyn* mag);
 void wyswietl_stan_magazynu(Magazyn* mag);
 
 // Pamiec dzielona

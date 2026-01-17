@@ -15,11 +15,17 @@ void handle_signal(int sig) {
 }
 
 
-int czy_bezpiecznie(int sem_id, int wolne, char typ) {
-    // 1 opcja: malo miejsca (<15) - Blokujemy skladniki ktore zajmujace 2 i 3 bajty (C i D)
+// Sprawdza czy mozna bezpiecznie wstawic skladnik (zapobiega deadlock)
+int czy_bezpiecznie(Magazyn* mag, char typ) {
+    int wolne = MAGAZYN_POJEMNOSC - mag->suma_bajtow;
+    
+    // Sprawdz limit kolejki dla tego skladnika
+    if (!czy_mozna_wstawic(mag, typ)) return 0;
+    
+    // 1 opcja: malo miejsca (<15) - Blokujemy skladniki zajmujace 2 i 3 bajty (C i D)
     if (wolne < 15) {
-        int cnt_c = sem_getval(sem_id, SEM_SKLAD_C);
-        int cnt_d = sem_getval(sem_id, SEM_SKLAD_D);
+        int cnt_c = mag->kolejka_C.count;
+        int cnt_d = mag->kolejka_D.count;
         
         // Jesli jest juz jakies C lub D, to nie dokladaj kolejnych
         if ((typ == 'C' && cnt_c > 0) || (typ == 'D' && cnt_d > 0)) return 0;
@@ -27,11 +33,7 @@ int czy_bezpiecznie(int sem_id, int wolne, char typ) {
 
     // 2 opcja: bardzo malo miejsca (<5) - tylko braki
     if (wolne < 5) {
-        int val = 0;
-        if (typ == 'A') val = sem_getval(sem_id, SEM_SKLAD_A);
-        if (typ == 'B') val = sem_getval(sem_id, SEM_SKLAD_B);
-        if (typ == 'C') val = sem_getval(sem_id, SEM_SKLAD_C);
-        if (typ == 'D') val = sem_getval(sem_id, SEM_SKLAD_D);
+        int val = zlicz_skladnik(mag, typ);
         
         // Wpuszczamy tylko jesli tego skladnika calkowicie brakuje
         if (val == 0) return 1;
@@ -39,14 +41,10 @@ int czy_bezpiecznie(int sem_id, int wolne, char typ) {
     }
 
     // 3 opcja limit nadprodukcji (zeby nie zapchac magazynu samym A)
-    int limit = 20;
-    int val = 0;
-    if (typ == 'A') val = sem_getval(sem_id, SEM_SKLAD_A);
-    if (typ == 'B') val = sem_getval(sem_id, SEM_SKLAD_B);
-    if (typ == 'C') val = sem_getval(sem_id, SEM_SKLAD_C);
-    if (typ == 'D') val = sem_getval(sem_id, SEM_SKLAD_D);
+    int limit = KOLEJKA_POJEMNOSC - 2; // Max 10 w kolejce
+    int val = zlicz_skladnik(mag, typ);
     
-    if (val > limit) return 0;
+    if (val >= limit) return 0;
 
     return 1;
 }
@@ -107,30 +105,35 @@ int main(int argc, char *argv[]) {
             break;
         }
 
-        int wolne_fizycznie = MAGAZYN_POJEMNOSC - mag->zajete;
+        int wolne_fizycznie = MAGAZYN_POJEMNOSC - mag->suma_bajtow;
         if (wolne_fizycznie < potrzebne_miejsce) {
             sem_signal(sem_id, SEM_MUTEX);
-            //usleep(100000); // Krótka przerwa
+            //usleep(10000); // Krotka przerwa
             continue;
         }
 
-        if (!czy_bezpiecznie(sem_id, wolne_fizycznie, skladnik)) {
+        if (!czy_bezpiecznie(mag, skladnik)) {
             sem_signal(sem_id, SEM_MUTEX);
-            //usleep(100000);
+            //usleep(10000);
             continue;
         }
 
+        int wstawiono = 0;
         for (int k=0; k<ilosc; k++) {
-            wstaw_do_bufora(mag, skladnik, rozmiar);
+            if (wstaw_do_kolejki(mag, skladnik)) {
+                wstawiono++;
+            }
         }
         
-        sprintf(log_buf, "[DOSTAWCA-%c] Dostarczono %d x %c | Magazyn zajety: %d/%d |", 
-                skladnik, ilosc, skladnik, mag->zajete, MAGAZYN_POJEMNOSC);
-        wyslij_log(msg_id, log_buf);
+        if (wstawiono > 0) {
+            sprintf(log_buf, "[DOSTAWCA-%c] Dostarczono %d x %c | Magazyn zajety: %d/%d |", 
+                    skladnik, wstawiono, skladnik, mag->suma_bajtow, MAGAZYN_POJEMNOSC);
+            wyslij_log(msg_id, log_buf);
+        }
 
         sem_signal(sem_id, SEM_MUTEX);
         
-        for (int j = 0; j < ilosc; j++) {
+        for (int j = 0; j < wstawiono; j++) {
             sem_signal(sem_id, sem_skladnik);
         }
         

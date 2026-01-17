@@ -14,6 +14,20 @@ void handle_signal(int sig) {
     running = 0;
 }
 
+// Sprawdza czy wszystkie potrzebne skladniki sa dostepne (atomowe sprawdzenie)
+int skladniki_dostepne(Magazyn* mag, int stanowisko) {
+    if (mag->kolejka_A.count < 1) return 0;
+    if (mag->kolejka_B.count < 1) return 0;
+    
+    if (stanowisko == 1) {
+        if (mag->kolejka_C.count < 1) return 0;
+    } else {
+        if (mag->kolejka_D.count < 1) return 0;
+    }
+    
+    return 1;
+}
+
 int main(int argc, char *argv[]) {
     if (argc < 2) return 1;
 
@@ -39,35 +53,49 @@ int main(int argc, char *argv[]) {
     int wyprodukowano = 0;
 
     while (running) {
-        sprintf(log_buf, "[PRACOWNIK-%d] Czekam na skladniki...\n", stanowisko);
-        wyslij_log(msg_id, log_buf);
-
-        // Pobieranie skladnikow 
-        sem_wait(sem_id, SEM_SKLAD_A); if(!running) break;
-        sem_wait(sem_id, SEM_SKLAD_B); if(!running) break;
+        // Atomowe pobieranie skladnikow (try-lock pattern)
+        // Zamiast czekac na semafory po kolei (ryzyko deadlock),
+        // sprawdzamy dostepnosc wszystkich skladnikow naraz
         
-        if (stanowisko == 1) sem_wait(sem_id, SEM_SKLAD_C);
-        else sem_wait(sem_id, SEM_SKLAD_D);
-        if(!running) break;
-
         sem_wait(sem_id, SEM_MUTEX);
+        if (!running) {
+            sem_signal(sem_id, SEM_MUTEX);
+            break;
+        }
         
-       // Odczyt z ringu
-        pobierz_z_bufora(mag, BAJT_A, ROZMIAR_A);
-        pobierz_z_bufora(mag, BAJT_B, ROZMIAR_B);
+        // Sprawdz czy wszystkie skladniki dostepne
+        if (!skladniki_dostepne(mag, stanowisko)) {
+            sem_signal(sem_id, SEM_MUTEX);
+            //usleep(10000); // Krotka przerwa i sprobuj ponownie
+            continue;
+        }
+        
+        // Atomowe pobranie wszystkich skladnikow z kolejek FIFO
+        pobierz_z_kolejki(mag, BAJT_A);
+        pobierz_z_kolejki(mag, BAJT_B);
         
         if (stanowisko == 1) {
-            pobierz_z_bufora(mag, BAJT_C, ROZMIAR_C);
+            pobierz_z_kolejki(mag, BAJT_C);
         } else {
-            pobierz_z_bufora(mag, BAJT_D, ROZMIAR_D);
+            pobierz_z_kolejki(mag, BAJT_D);
         }
 
-        sprintf(log_buf, "[PRACOWNIK-%d] Pobranno skladniki | Magazyn zajety: %d/%d |", 
-                stanowisko, mag->zajete, MAGAZYN_POJEMNOSC);
+        sprintf(log_buf, "[PRACOWNIK-%d] Pobrano skladniki | Magazyn zajety: %d/%d |", 
+                stanowisko, mag->suma_bajtow, MAGAZYN_POJEMNOSC);
 
         wyslij_log(msg_id, log_buf);
 
         sem_signal(sem_id, SEM_MUTEX);
+
+
+        sem_wait(sem_id, SEM_SKLAD_A);
+        sem_wait(sem_id, SEM_SKLAD_B);
+
+        if (stanowisko == 1) {
+            sem_wait(sem_id, SEM_SKLAD_C);
+        } else {
+            sem_wait(sem_id, SEM_SKLAD_D);
+        }
 
         // Produkcja
         //sleep((rand() % 2) + 1);
