@@ -46,9 +46,8 @@ void posprzataj(int shm_id, int sem_id, int msg_id, Magazyn* mag) {
     usun_semafory(sem_id);
 }
 
-void proces_logera() {
+void proces_logera(int msg_id) {
     printf("[LOGER] Start. Zapisuje do pliku: %s\n", PLIK_RAPORTU);
-    int msg_id = utworz_kolejke();
     
     FILE* f = fopen(PLIK_RAPORTU, "w");
     if (!f) { perror("fopen raport"); exit(1); }
@@ -105,9 +104,11 @@ int main() {
         zaktualizuj_semafory(sem_id, magazyn);
     }
 
+    int msg_id = utworz_kolejke();
+
     // Uruchamianie logera
     if ((pid_loger = fork()) == 0) {
-        proces_logera();
+        proces_logera(msg_id);
         exit(0);
     }
 
@@ -190,7 +191,7 @@ int main() {
     for(int i=0; i<6; i++) wait(NULL);
     
     wyswietl_stan_magazynu(magazyn);
-    int msg_id = polacz_kolejke();
+    msg_id = polacz_kolejke();
     posprzataj(shm_id, sem_id, msg_id, magazyn);
 
     return 0;
