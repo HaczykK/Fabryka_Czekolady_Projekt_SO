@@ -123,19 +123,39 @@ void wyswietl_stan_magazynu(Magazyn* mag) {
     int count_b = mag->kolejka_B.count;
     int count_c = mag->kolejka_C.count;
     int count_d = mag->kolejka_D.count;
+    
+    int procent = (mag->suma_bajtow * 100) / MAGAZYN_POJEMNOSC;
+    const char* kolor_zapelnienia;
+    if (procent < 50) kolor_zapelnienia = KOLOR_ZIELONY;
+    else if (procent < 80) kolor_zapelnienia = KOLOR_ZOLTY;
+    else kolor_zapelnienia = KOLOR_CZERWONY;
 
     printf("\n");
-    printf("+--------------------------------------------+\n");
+    printf("%s%s+--------------------------------------------+\n", KOLOR_BOLD, KOLOR_CYAN);
     printf("|          STAN MAGAZYNU (RING BUFFER)       |\n");
-    printf("+--------------------------------------------+\n");
-    printf("|  Skladnik A: %3d szt. (%3d bajtow)         |\n", count_a, count_a * ROZMIAR_A);
-    printf("|  Skladnik B: %3d szt. (%3d bajtow)         |\n", count_b, count_b * ROZMIAR_B);
-    printf("|  Skladnik C: %3d szt. (%3d bajtow)         |\n", count_c, count_c * ROZMIAR_C);
-    printf("|  Skladnik D: %3d szt. (%3d bajtow)         |\n", count_d, count_d * ROZMIAR_D);
-    printf("+--------------------------------------------+\n");
-    printf("|  Zajete: %4d / %4d bajtow                |\n", mag->suma_bajtow, MAGAZYN_POJEMNOSC);
+    printf("+--------------------------------------------+%s\n", KOLOR_RESET);
+    printf("|  %sSkladnik A:%s %3d szt. (%3d bajtow)         |\n", KOLOR_ZIELONY, KOLOR_RESET, count_a, count_a * ROZMIAR_A);
+    printf("|  %sSkladnik B:%s %3d szt. (%3d bajtow)         |\n", KOLOR_ZIELONY, KOLOR_RESET, count_b, count_b * ROZMIAR_B);
+    printf("|  %sSkladnik C:%s %3d szt. (%3d bajtow)         |\n", KOLOR_ZIELONY, KOLOR_RESET, count_c, count_c * ROZMIAR_C);
+    printf("|  %sSkladnik D:%s %3d szt. (%3d bajtow)         |\n", KOLOR_ZIELONY, KOLOR_RESET, count_d, count_d * ROZMIAR_D);
+    printf("%s%s+--------------------------------------------+%s\n", KOLOR_BOLD, KOLOR_CYAN, KOLOR_RESET);
+    printf("|  Zajete: %s%4d%s / %4d bajtow (%s%3d%%%s)         |\n", 
+           kolor_zapelnienia, mag->suma_bajtow, KOLOR_RESET, 
+           MAGAZYN_POJEMNOSC, kolor_zapelnienia, procent, KOLOR_RESET);
     printf("|  Wolne:  %4d bajtow                       |\n", MAGAZYN_POJEMNOSC - mag->suma_bajtow);
-    printf("+--------------------------------------------+\n");
+    
+    // Pasek postepu
+    printf("|  [");
+    for(int i = 0; i < 40; i++) {
+        if (i < (procent * 40) / 100) {
+            printf("%s#%s", kolor_zapelnienia, KOLOR_RESET);
+        } else {
+            printf("-");
+        }
+    }
+    printf("]|\n");
+    
+    printf("%s%s+--------------------------------------------+%s\n", KOLOR_BOLD, KOLOR_CYAN, KOLOR_RESET);
     printf("\n");
 }
 

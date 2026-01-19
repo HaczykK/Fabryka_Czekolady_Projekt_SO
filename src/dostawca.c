@@ -90,7 +90,8 @@ int main(int argc, char *argv[]) {
 
     char log_buf[256];
 
-    sprintf(log_buf, "[DOSTAWCA-%c] PID:%d Start pracy (rozmiar jednostki: %d)\n", skladnik, getpid(), rozmiar);
+    sprintf(log_buf, "%s[DOSTAWCA-%c]%s PID:%d Start pracy (rozmiar jednostki: %d)\n", 
+            KOLOR_ZIELONY, skladnik, KOLOR_RESET, getpid(), rozmiar);
     wyslij_log(msg_id, log_buf);
     
     srand(time(NULL) + getpid());
@@ -126,8 +127,10 @@ int main(int argc, char *argv[]) {
         }
         
         if (wstawiono > 0) {
-            sprintf(log_buf, "[DOSTAWCA-%c] Dostarczono %d x %c | Magazyn zajety: %d/%d |", 
-                    skladnik, wstawiono, skladnik, mag->suma_bajtow, MAGAZYN_POJEMNOSC);
+            sprintf(log_buf, "%s[DOSTAWCA-%c]%s Dostarczono %s%d x %c%s | Magazyn zajety: %d/%d |", 
+                    KOLOR_ZIELONY, skladnik, KOLOR_RESET,
+                    KOLOR_BOLD, wstawiono, skladnik, KOLOR_RESET,
+                    mag->suma_bajtow, MAGAZYN_POJEMNOSC);
             wyslij_log(msg_id, log_buf);
         }
 
@@ -140,7 +143,8 @@ int main(int argc, char *argv[]) {
         sleep((rand() % 3) + 1);
     }
     
-    sprintf(log_buf, "[DOSTAWCA-%c] Koniec pracy |\n", skladnik);
+    sprintf(log_buf, "%s[DOSTAWCA-%c]%s Koniec pracy |\n", 
+            KOLOR_CZERWONY, skladnik, KOLOR_RESET);
     wyslij_log(msg_id, log_buf);
     odlacz_pamiec_dzielona(mag);
     return 0;

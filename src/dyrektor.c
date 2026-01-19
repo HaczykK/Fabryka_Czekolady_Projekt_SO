@@ -17,16 +17,16 @@ int liczba_pracownikow = 0;
 
 void wyswietl_menu() {
     printf("\n");
-    printf("====================================================\n");
+    printf("%s%s====================================================\n", KOLOR_BOLD, KOLOR_NIEBIESKI);
     printf("||                  MENU DYREKTORA                ||\n");
-    printf("====================================================\n");
-    printf("||  1 - Polecenie_1: Fabryka konczy prace         ||\n");
+    printf("====================================================%s\n", KOLOR_RESET);
+    printf("%s||  1 - Polecenie_1: Fabryka konczy prace         ||\n", KOLOR_ZOLTY);
     printf("||  2 - Polecenie_2: Zamknij Magazyn              ||\n");
     printf("||  3 - Polecenie_3: Dostawcy przerywaja prace    ||\n");
     printf("||  4 - Polecenie_4: Fabryka+Magazyn konczy prace ||\n");
-    printf("||  5 - Polecenie_5: Wyswietl stan magazynu       || \n");
-    printf("====================================================\n");
-    printf("Wybierz opcje: ");
+    printf("||  5 - Polecenie_5: Wyswietl stan magazynu       ||%s\n", KOLOR_RESET);
+    printf("%s%s====================================================%s\n", KOLOR_BOLD, KOLOR_NIEBIESKI, KOLOR_RESET);
+    printf("%sWybierz opcje: %s", KOLOR_BOLD, KOLOR_RESET);
     fflush(stdout);
 }
 
@@ -156,31 +156,32 @@ int main() {
 
         // Walidacja wejscia od uzytkownika
         if (scanf("%d", &opcja) != 1) {
-            printf("\n[BLAD] Wprowadz liczbe calkowita!\n");
+            printf("\n%s[BLAD]%s Wprowadz liczbe calkowita!\n", KOLOR_CZERWONY, KOLOR_RESET);
             while(getchar() != '\n'); // Czyszczenie bufora wejscia
             continue;
         }
         
         // Sprawdzenie zakresu opcji
         if (opcja < 1 || opcja > 5) {
-            printf("\n[BLAD] Opcja musi byc z zakresu 1-5! Wprowadzono: %d\n", opcja);
+            printf("\n%s[BLAD]%s Opcja musi byc z zakresu 1-5! Wprowadzono: %d\n", 
+                   KOLOR_CZERWONY, KOLOR_RESET, opcja);
             continue;
         }
 
         switch(opcja) {
             case 1: // Stop Pracownikow
-                printf(">> Wysylam SIGUSR1 do Pracownikow...\n");
+                printf("%s>> Wysylam SIGUSR1 do Pracownikow...%s\n", KOLOR_ZOLTY, KOLOR_RESET);
                 for(int i=0; i<2; i++) kill(pids_pracownicy[i], SIGUSR1);
                 break;
 
             case 3: // Stop Dostawcow
-                printf(">> Wysylam SIGUSR2 do Dostawcow...\n");
+                printf("%s>> Wysylam SIGUSR2 do Dostawcow...%s\n", KOLOR_ZOLTY, KOLOR_RESET);
                 for(int i=0; i<4; i++) kill(pids_dostawcy[i], SIGUSR2);
                 break;
             
             case 2: // Stop Magazynu (Wszyscy)
             case 4: // Stop
-                printf(">> Koniec symulacji. Zatrzymuje wszystkich...\n");
+                printf("%s>> Koniec symulacji. Zatrzymuje wszystkich...%s\n", KOLOR_CZERWONY, KOLOR_RESET);
                 for(int i=0; i<4; i++) kill(pids_dostawcy[i], SIGTERM);
                 for(int i=0; i<2; i++) kill(pids_pracownicy[i], SIGTERM);
                 if (opcja == 4) {

@@ -46,7 +46,8 @@ int main(int argc, char *argv[]) {
    
     char log_buf[256];
 
-    sprintf(log_buf, "[PRACOWNIK-%d] PID:%d Start - produkuje czekolade %s\n", stanowisko, getpid(), typ_czekolady);
+    sprintf(log_buf, "%s[PRACOWNIK-%d]%s PID:%d Start - produkuje czekolade %s\n", 
+            KOLOR_CYAN, stanowisko, KOLOR_RESET, getpid(), typ_czekolady);
     wyslij_log(msg_id, log_buf); 
 
     srand(time(NULL) + getpid());
@@ -80,8 +81,9 @@ int main(int argc, char *argv[]) {
             pobierz_z_kolejki(mag, BAJT_D);
         }
 
-        sprintf(log_buf, "[PRACOWNIK-%d] Pobrano skladniki | Magazyn zajety: %d/%d |", 
-                stanowisko, mag->suma_bajtow, MAGAZYN_POJEMNOSC);
+        sprintf(log_buf, "%s[PRACOWNIK-%d]%s Pobrano skladniki | Magazyn zajety: %d/%d |", 
+                KOLOR_CYAN, stanowisko, KOLOR_RESET,
+                mag->suma_bajtow, MAGAZYN_POJEMNOSC);
 
         wyslij_log(msg_id, log_buf);
 
@@ -100,11 +102,14 @@ int main(int argc, char *argv[]) {
         // Produkcja
         sleep((rand() % 2) + 1);
         wyprodukowano++;
-        sprintf(log_buf, "[PRACOWNIK-%d] *** WYPRODUKOWANO CZEKOLADE - %s  #%d ***\n", stanowisko, typ_czekolady, wyprodukowano);
+        sprintf(log_buf, "%s%s[PRACOWNIK-%d] *** WYPRODUKOWANO CZEKOLADE - %s  #%d ***%s\n", 
+                KOLOR_BOLD, KOLOR_MAGENTA, stanowisko, typ_czekolady, wyprodukowano, KOLOR_RESET);
         wyslij_log(msg_id, log_buf);
     }
 
-    sprintf(log_buf, "[PRACOWNIK-%d] Koniec. Wyprodukowano: %d czekolady %s\n", stanowisko, wyprodukowano, typ_czekolady);
+    sprintf(log_buf, "%s[PRACOWNIK-%d]%s Koniec. Wyprodukowano: %s%d%s czekolady %s\n", 
+            KOLOR_CZERWONY, stanowisko, KOLOR_RESET, 
+            KOLOR_BOLD, wyprodukowano, KOLOR_RESET, typ_czekolady);
     wyslij_log(msg_id, log_buf);
     odlacz_pamiec_dzielona(mag);
     return 0;
