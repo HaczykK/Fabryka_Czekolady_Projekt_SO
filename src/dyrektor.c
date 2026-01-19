@@ -154,8 +154,18 @@ int main() {
     while(running) {
         wyswietl_menu();
 
-
-        if (scanf("%d", &opcja) != 1) { while(getchar()!='\n'); continue; }
+        // Walidacja wejscia od uzytkownika
+        if (scanf("%d", &opcja) != 1) {
+            printf("\n[BLAD] Wprowadz liczbe calkowita!\n");
+            while(getchar() != '\n'); // Czyszczenie bufora wejscia
+            continue;
+        }
+        
+        // Sprawdzenie zakresu opcji
+        if (opcja < 1 || opcja > 5) {
+            printf("\n[BLAD] Opcja musi byc z zakresu 1-5! Wprowadzono: %d\n", opcja);
+            continue;
+        }
 
         switch(opcja) {
             case 1: // Stop Pracownikow

@@ -108,13 +108,13 @@ int main(int argc, char *argv[]) {
         int wolne_fizycznie = MAGAZYN_POJEMNOSC - mag->suma_bajtow;
         if (wolne_fizycznie < potrzebne_miejsce) {
             sem_signal(sem_id, SEM_MUTEX);
-            //usleep(10000); // Krotka przerwa
+            usleep(10000); // Krotka przerwa
             continue;
         }
 
         if (!czy_bezpiecznie(mag, skladnik)) {
             sem_signal(sem_id, SEM_MUTEX);
-            //usleep(10000);
+            usleep(10000);
             continue;
         }
 
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
             sem_signal(sem_id, sem_skladnik);
         }
         
-        //sleep((rand() % 3) + 1);
+        sleep((rand() % 3) + 1);
     }
     
     sprintf(log_buf, "[DOSTAWCA-%c] Koniec pracy |\n", skladnik);

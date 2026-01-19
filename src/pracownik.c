@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
         // Sprawdz czy wszystkie skladniki dostepne
         if (!skladniki_dostepne(mag, stanowisko)) {
             sem_signal(sem_id, SEM_MUTEX);
-            //usleep(10000); // Krotka przerwa i sprobuj ponownie
+            usleep(10000); // Krotka przerwa i sprobuj ponownie
             continue;
         }
         
@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Produkcja
-        //sleep((rand() % 2) + 1);
+        sleep((rand() % 2) + 1);
         wyprodukowano++;
         sprintf(log_buf, "[PRACOWNIK-%d] *** WYPRODUKOWANO CZEKOLADE - %s  #%d ***\n", stanowisko, typ_czekolady, wyprodukowano);
         wyslij_log(msg_id, log_buf);
