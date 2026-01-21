@@ -119,7 +119,9 @@ int zlicz_skladnik(Magazyn* mag, char typ) {
 }
 
 // Wyswietla stan magazynu
-void wyswietl_stan_magazynu(Magazyn* mag) {
+void wyswietl_stan_magazynu(int msg_id, Magazyn* mag) {
+    char log_buf[256];
+
     int count_a = mag->kolejka_A.count;
     int count_b = mag->kolejka_B.count;
     int count_c = mag->kolejka_C.count;
@@ -131,22 +133,33 @@ void wyswietl_stan_magazynu(Magazyn* mag) {
     else if (procent < 80) kolor_zapelnienia = KOLOR_ZOLTY;
     else kolor_zapelnienia = KOLOR_CZERWONY;
 
-    printf("\n");
-    printf("%s%s+--------------------------------------------+\n", KOLOR_BOLD, KOLOR_CYAN);
-    printf("|          STAN MAGAZYNU (RING BUFFER)       |\n");
-    printf("+--------------------------------------------+%s\n", KOLOR_RESET);
-    printf("|  %sSkladnik A:%s %3d szt. (%3d bajtow)         |\n", KOLOR_ZIELONY, KOLOR_RESET, count_a, count_a * ROZMIAR_A);
-    printf("|  %sSkladnik B:%s %3d szt. (%3d bajtow)         |\n", KOLOR_ZIELONY, KOLOR_RESET, count_b, count_b * ROZMIAR_B);
-    printf("|  %sSkladnik C:%s %3d szt. (%3d bajtow)         |\n", KOLOR_ZIELONY, KOLOR_RESET, count_c, count_c * ROZMIAR_C);
-    printf("|  %sSkladnik D:%s %3d szt. (%3d bajtow)         |\n", KOLOR_ZIELONY, KOLOR_RESET, count_d, count_d * ROZMIAR_D);
-    printf("%s%s+--------------------------------------------+%s\n", KOLOR_BOLD, KOLOR_CYAN, KOLOR_RESET);
-    printf("|  Zajete: %s%4d%s / %4d bajtow (%s%3d%%%s)         |\n", 
+    sprintf(log_buf, " ");
+    wyslij_log(msg_id, log_buf);
+    sprintf(log_buf, "%s%s+--------------------------------------------+", KOLOR_BOLD, KOLOR_CYAN);
+    wyslij_log(msg_id, log_buf);
+    sprintf(log_buf, "|          STAN MAGAZYNU (RING BUFFER)       |");
+    wyslij_log(msg_id, log_buf);
+    sprintf(log_buf, "+--------------------------------------------+%s", KOLOR_RESET);
+    wyslij_log(msg_id, log_buf);
+    sprintf(log_buf, "|  %sSkladnik A:%s %3d szt. (%3d bajtow)         |", KOLOR_ZIELONY, KOLOR_RESET, count_a, count_a * ROZMIAR_A);
+    wyslij_log(msg_id, log_buf);
+    sprintf(log_buf, "|  %sSkladnik B:%s %3d szt. (%3d bajtow)         |", KOLOR_ZIELONY, KOLOR_RESET, count_b, count_b * ROZMIAR_B);
+    wyslij_log(msg_id, log_buf);
+    sprintf(log_buf, "|  %sSkladnik C:%s %3d szt. (%3d bajtow)         |", KOLOR_ZIELONY, KOLOR_RESET, count_c, count_c * ROZMIAR_C);
+    wyslij_log(msg_id, log_buf);
+    sprintf(log_buf, "|  %sSkladnik D:%s %3d szt. (%3d bajtow)         |", KOLOR_ZIELONY, KOLOR_RESET, count_d, count_d * ROZMIAR_D);
+    wyslij_log(msg_id, log_buf);
+    sprintf(log_buf, "%s%s+--------------------------------------------+%s", KOLOR_BOLD, KOLOR_CYAN, KOLOR_RESET);
+    wyslij_log(msg_id, log_buf);
+    sprintf(log_buf, "|  Zajete: %s%4d%s / %4d bajtow (%s%3d%%%s)         |", 
            kolor_zapelnienia, mag->suma_bajtow, KOLOR_RESET, 
            MAGAZYN_POJEMNOSC, kolor_zapelnienia, procent, KOLOR_RESET);
-    printf("|  Wolne:  %4d bajtow                       |\n", MAGAZYN_POJEMNOSC - mag->suma_bajtow);
+    wyslij_log(msg_id, log_buf);
+    sprintf(log_buf,"|  Wolne:  %4d bajtow                       |", MAGAZYN_POJEMNOSC - mag->suma_bajtow);
+    wyslij_log(msg_id, log_buf);
     
     // Pasek postepu
-    printf("|  [");
+    /*printf("|  [");
     for(int i = 0; i < 40; i++) {
         if (i < (procent * 40) / 100) {
             printf("%s#%s", kolor_zapelnienia, KOLOR_RESET);
@@ -154,10 +167,12 @@ void wyswietl_stan_magazynu(Magazyn* mag) {
             printf("-");
         }
     }
-    printf("]|\n");
+    printf("]|\n");*/
     
-    printf("%s%s+--------------------------------------------+%s\n", KOLOR_BOLD, KOLOR_CYAN, KOLOR_RESET);
-    printf("\n");
+    sprintf(log_buf, "%s%s+--------------------------------------------+%s\n", KOLOR_BOLD, KOLOR_CYAN, KOLOR_RESET);
+    wyslij_log(msg_id, log_buf);
+    sprintf(log_buf, "\n");
+    wyslij_log(msg_id, log_buf);
 }
 
 // Pamiec dzielona

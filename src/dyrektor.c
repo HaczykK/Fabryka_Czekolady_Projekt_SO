@@ -14,6 +14,7 @@ pid_t pids_pracownicy[2];
 pid_t pid_loger;
 int liczba_dostawcow = 0;
 int liczba_pracownikow = 0;
+char log_buf[256];
 
 void wyswietl_menu() {
     printf("\n");
@@ -57,7 +58,7 @@ void proces_logera(int msg_id) {
     
     Komunikat msg;
     while(1) {
-        // msgrcv blokuje proces (nie zuzywa CPU), czeka na wiadomosc
+        // msgrcv blokuje proces czeka na wiadomosc
         if (msgrcv(msg_id, &msg, sizeof(msg.tekst), 1, 0) != -1) {
             fprintf(f, "%s\n", msg.tekst);
             fflush(f);
@@ -67,42 +68,6 @@ void proces_logera(int msg_id) {
 
 int main() {
 
-    printf("========================================\n");
-    printf("    FABRYKA CZEKOLADY - DYREKTOR\n");
-    printf("========================================\n\n");
-
-    int shm_id = utworz_pamiec_dzielona();
-    Magazyn* magazyn = polacz_z_pamiecia_dzielona(shm_id);
-    int wczytano_stan = 0;
-
-    // Inicjalizacja magazynu
-    printf("[DYREKTOR] Inicjalizacja magazynu...\n");
-
-    // Sprawdz czy istnieje zapisany stan
-    if (czy_istnieje_plik_stanu(MAGAZYN_PLIK)) {
-        printf("[DYREKTOR] Znaleziono zapisany stan magazynu\n");
-        if (odczytaj_stan_magazynu(magazyn, MAGAZYN_PLIK) == 0) {
-            printf("[DYREKTOR] Stan magazynu odtworzony z pliku!\n");
-            wczytano_stan = 1;
-        } else {
-            printf("[DYREKTOR] Blad odczytu - inicjalizacja od zera\n");
-            inicjalizuj_magazyn(magazyn);
-            wczytano_stan = 0;
-        }
-    } else {
-        printf("[DYREKTOR] Brak zapisanego stanu - inicjalizacja od zera\n");
-        inicjalizuj_magazyn(magazyn);
-        wczytano_stan = 0;
-    }
-
-    printf("\n[DYREKTOR] Poczatkowy stan magazynu:\n");
-    wyswietl_stan_magazynu(magazyn);
-
-    int sem_id = utworz_semafory();
-    inicjalizuj_semafory(sem_id);
-    if (wczytano_stan) {
-        zaktualizuj_semafory(sem_id, magazyn);
-    }
 
     int msg_id = utworz_kolejke();
 
@@ -111,6 +76,54 @@ int main() {
         proces_logera(msg_id);
         exit(0);
     }
+    
+    sprintf(log_buf, "========================================");
+    wyslij_log(msg_id, log_buf);
+    sprintf(log_buf, "    FABRYKA CZEKOLADY - DYREKTOR");
+    wyslij_log(msg_id, log_buf);
+    sprintf(log_buf, "========================================");
+    wyslij_log(msg_id, log_buf);
+
+    int shm_id = utworz_pamiec_dzielona();
+    Magazyn* magazyn = polacz_z_pamiecia_dzielona(shm_id);
+    int wczytano_stan = 0;
+
+    // Inicjalizacja magazynu
+    sprintf(log_buf, "[DYREKTOR] Inicjalizacja magazynu...");
+    wyslij_log(msg_id, log_buf);
+
+    // Sprawdz czy istnieje zapisany stan
+    if (czy_istnieje_plik_stanu(MAGAZYN_PLIK)) {
+        sprintf(log_buf, "[DYREKTOR] Znaleziono zapisany stan magazynu");
+        wyslij_log(msg_id, log_buf);
+        if (odczytaj_stan_magazynu(magazyn, MAGAZYN_PLIK) == 0) {
+            sprintf(log_buf, "[DYREKTOR] Stan magazynu odtworzony z pliku!");
+            wyslij_log(msg_id, log_buf);
+            wczytano_stan = 1;
+        } else {
+            sprintf(log_buf, "[DYREKTOR] Blad odczytu - inicjalizacja od zera");
+            wyslij_log(msg_id, log_buf);
+            inicjalizuj_magazyn(magazyn);
+            wczytano_stan = 0;
+        }
+    } else {
+        sprintf(log_buf, "[DYREKTOR] Brak zapisanego stanu - inicjalizacja od zera");
+        wyslij_log(msg_id, log_buf);
+        inicjalizuj_magazyn(magazyn);
+        wczytano_stan = 0;
+    }
+
+    sprintf(log_buf, "\n[DYREKTOR] Poczatkowy stan magazynu:");
+    wyslij_log(msg_id, log_buf);
+    wyswietl_stan_magazynu(msg_id, magazyn);
+
+    int sem_id = utworz_semafory();
+    inicjalizuj_semafory(sem_id);
+    if (wczytano_stan) {
+        zaktualizuj_semafory(sem_id, magazyn);
+    }
+
+    
 
 
     // Uruchamianie dostawcow
@@ -122,13 +135,14 @@ int main() {
             perror("execl dostawca");
             exit(1);
     }
-        printf("[DYREKTOR] Dostawca %s uruchomiony (PID: %d)\n", 
+        sprintf(log_buf, "[DYREKTOR] Dostawca %s uruchomiony (PID: %d)", 
                 skladniki[i], pids_dostawcy[liczba_dostawcow]);
+        wyslij_log(msg_id, log_buf);
         liczba_dostawcow++;
     }
 
     // Uruchamianie pracownikow
-    printf("\n[DYREKTOR] Uruchamiam 2 pracownikow (stanowisko 1 i 2)...\n");
+    sprintf(log_buf, "\n[DYREKTOR] Uruchamiam 2 pracownikow (stanowisko 1 i 2)...");
 
     for (int i = 1; i <= 2; i++) {
         pids_pracownicy[liczba_pracownikow] = fork();
@@ -139,12 +153,13 @@ int main() {
             perror("execl pracownik");
             exit(1);
     }
-    printf("[DYREKTOR] Pracownik %d uruchomiony (PID: %d)\n", 
+    sprintf(log_buf, "[DYREKTOR] Pracownik %d uruchomiony (PID: %d)", 
            i, pids_pracownicy[liczba_pracownikow]);
+    wyslij_log(msg_id, log_buf);
     liczba_pracownikow++;
     }
 
-    printf("\n[DYREKTOR] Fabryka uruchomiona!\n");
+    sprintf(log_buf, "\n[DYREKTOR] Fabryka uruchomiona!");
 
     // --- MENU GLOWNE ---
     int running = 1;
@@ -152,36 +167,41 @@ int main() {
     
 
     while(running) {
-        wyswietl_menu();
+        wyswietl_menu(msg_id);
 
         // Walidacja wejscia od uzytkownika
         if (scanf("%d", &opcja) != 1) {
-            printf("\n%s[BLAD]%s Wprowadz liczbe calkowita!\n", KOLOR_CZERWONY, KOLOR_RESET);
+            sprintf(log_buf, "\n%s[BLAD]%s Wprowadz liczbe calkowita!", KOLOR_CZERWONY, KOLOR_RESET);
+            wyslij_log(msg_id, log_buf);
             while(getchar() != '\n'); // Czyszczenie bufora wejscia
             continue;
         }
         
         // Sprawdzenie zakresu opcji
         if (opcja < 1 || opcja > 5) {
-            printf("\n%s[BLAD]%s Opcja musi byc z zakresu 1-5! Wprowadzono: %d\n", 
+            sprintf(log_buf, "\n%s[BLAD]%s Opcja musi byc z zakresu 1-5! Wprowadzono: %d", 
                    KOLOR_CZERWONY, KOLOR_RESET, opcja);
+            wyslij_log(msg_id, log_buf);
             continue;
         }
 
         switch(opcja) {
             case 1: // Stop Pracownikow
-                printf("%s>> Wysylam SIGUSR1 do Pracownikow...%s\n", KOLOR_ZOLTY, KOLOR_RESET);
+                sprintf(log_buf, "%s>> [DYREKTOR] Wysylam SIGUSR1 do Pracownikow...%s", KOLOR_ZOLTY, KOLOR_RESET);
+                wyslij_log(msg_id, log_buf);
                 for(int i=0; i<2; i++) kill(pids_pracownicy[i], SIGUSR1);
                 break;
 
             case 3: // Stop Dostawcow
-                printf("%s>> Wysylam SIGUSR2 do Dostawcow...%s\n", KOLOR_ZOLTY, KOLOR_RESET);
+                sprintf(log_buf, "%s>> [DYREKTOR] Wysylam SIGUSR2 do Dostawcow...%s", KOLOR_ZOLTY, KOLOR_RESET);
+                wyslij_log(msg_id, log_buf);
                 for(int i=0; i<4; i++) kill(pids_dostawcy[i], SIGUSR2);
                 break;
             
             case 2: // Stop Magazynu (Wszyscy)
             case 4: // Stop
-                printf("%s>> Koniec symulacji. Zatrzymuje wszystkich...%s\n", KOLOR_CZERWONY, KOLOR_RESET);
+                sprintf(log_buf, "%s>> [DYREKTOR] Koniec symulacji. Zatrzymuje wszystkich...%s", KOLOR_CZERWONY, KOLOR_RESET);
+                wyslij_log(msg_id, log_buf);
                 for(int i=0; i<4; i++) kill(pids_dostawcy[i], SIGTERM);
                 for(int i=0; i<2; i++) kill(pids_pracownicy[i], SIGTERM);
                 if (opcja == 4) {
@@ -192,16 +212,18 @@ int main() {
                 break;
             
             case 5:
-                wyswietl_stan_magazynu(magazyn);
+                wyswietl_stan_magazynu(msg_id, magazyn);
                 break;
-            default: printf("Nieznana opcja.\n");
+            default: 
+                sprintf(log_buf, "Nieznana opcja.");
+                wyslij_log(msg_id, log_buf);
         }
     }
 
     // Czekaj na dzieci
     for(int i=0; i<6; i++) wait(NULL);
     
-    wyswietl_stan_magazynu(magazyn);
+    wyswietl_stan_magazynu(msg_id, magazyn);
     msg_id = polacz_kolejke();
     posprzataj(shm_id, sem_id, msg_id, magazyn);
 

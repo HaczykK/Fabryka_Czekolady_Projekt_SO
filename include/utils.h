@@ -16,7 +16,7 @@ int pobierz_z_kolejki(Magazyn* mag, char typ);
 int zlicz_skladnik(Magazyn* mag, char typ);
 
 // Wyswietlanie stanu magazynu
-void wyswietl_stan_magazynu(Magazyn* mag);
+void wyswietl_stan_magazynu(int msg_id, Magazyn* mag);
 
 // Pamiec dzielona
 int utworz_pamiec_dzielona();
