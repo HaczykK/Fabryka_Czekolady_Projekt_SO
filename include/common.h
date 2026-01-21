@@ -23,7 +23,7 @@
 #define BAJT_D 'D'
 #define BAJT_PUSTY '.'
 
-// Kolory ANSI dla terminala
+// Kolory dla terminala
 #define KOLOR_RESET   "\033[0m"
 #define KOLOR_CZERWONY "\033[31m"
 #define KOLOR_ZIELONY  "\033[32m"
@@ -50,7 +50,7 @@
 
 typedef struct {
     long mtype;       // Typ komunikatu (musi byc > 0)
-    char tekst[256];  // Tresc wiadomosci
+    char tekst[512];  // Tresc wiadomosci
 } Komunikat;
 
 
@@ -64,7 +64,7 @@ typedef struct {
     int count;      // Liczba elementow w kolejce
 } RingQueue;
 
-// Struktura magazynu - osobne kolejki FIFO per skladnik
+// Struktura magazynu - osobne kolejki FIFO dla kazdego skladnika
 typedef struct {
     RingQueue kolejka_A;
     RingQueue kolejka_B;

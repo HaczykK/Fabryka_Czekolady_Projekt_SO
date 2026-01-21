@@ -46,13 +46,15 @@ int main(int argc, char *argv[]) {
    
     char log_buf[256];
 
-    sprintf(log_buf, "%s[PRACOWNIK-%d]%s PID:%d Start - produkuje czekolade %s\n", 
+    sprintf(log_buf, "%s[PRACOWNIK-%d]%s PID:%d Start - produkuje czekolade %s", 
             KOLOR_CYAN, stanowisko, KOLOR_RESET, getpid(), typ_czekolady);
     wyslij_log(msg_id, log_buf); 
 
     srand(time(NULL) + getpid());
     int wyprodukowano = 0;
 
+    int czy_czekam = 0;
+    
     while (running) {
         // Atomowe pobieranie skladnikow (try-lock pattern)
         // Zamiast czekac na semafory po kolei (ryzyko deadlock),
@@ -67,8 +69,20 @@ int main(int argc, char *argv[]) {
         // Sprawdz czy wszystkie skladniki dostepne
         if (!skladniki_dostepne(mag, stanowisko)) {
             sem_signal(sem_id, SEM_MUTEX);
+
+            if (czy_czekam == 0) {
+                sprintf(log_buf, "%s[PRACOWNIK-%d]%s Czekam na skladniki...", 
+                        KOLOR_NIEBIESKI, stanowisko, KOLOR_RESET);
+                wyslij_log(msg_id, log_buf);
+                czy_czekam = 1; // Ustawiamy flage
+            }
+
             usleep(10000); // Krotka przerwa i sprobuj ponownie
             continue;
+        }
+
+        if (czy_czekam == 1) {
+             czy_czekam = 0; 
         }
         
         // Atomowe pobranie wszystkich skladnikow z kolejek FIFO
@@ -100,14 +114,14 @@ int main(int argc, char *argv[]) {
         }
 
         // Produkcja
-        sleep((rand() % 2) + 1);
+        sleep((rand() % 5) + 1);
         wyprodukowano++;
-        sprintf(log_buf, "%s%s[PRACOWNIK-%d] *** WYPRODUKOWANO CZEKOLADE - %s  #%d ***%s\n", 
+        sprintf(log_buf, "%s%s[PRACOWNIK-%d] *** WYPRODUKOWANO CZEKOLADE - %s  #%d ***%s", 
                 KOLOR_BOLD, KOLOR_MAGENTA, stanowisko, typ_czekolady, wyprodukowano, KOLOR_RESET);
         wyslij_log(msg_id, log_buf);
     }
 
-    sprintf(log_buf, "%s[PRACOWNIK-%d]%s Koniec. Wyprodukowano: %s%d%s czekolady %s\n", 
+    sprintf(log_buf, "%s[PRACOWNIK-%d]%s Koniec. Wyprodukowano: %s%d%s czekolady %s", 
             KOLOR_CZERWONY, stanowisko, KOLOR_RESET, 
             KOLOR_BOLD, wyprodukowano, KOLOR_RESET, typ_czekolady);
     wyslij_log(msg_id, log_buf);

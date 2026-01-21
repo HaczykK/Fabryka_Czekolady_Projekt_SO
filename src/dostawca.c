@@ -23,7 +23,7 @@ int czy_bezpiecznie(Magazyn* mag, char typ) {
     if (!czy_mozna_wstawic(mag, typ)) return 0;
     
     // 1 opcja: malo miejsca (<15) - Blokujemy skladniki zajmujace 2 i 3 bajty (C i D)
-    if (wolne < 15) {
+    if (wolne < 10) {
         int cnt_c = mag->kolejka_C.count;
         int cnt_d = mag->kolejka_D.count;
         
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
     if (argc < 2) return 1;
 
     // Rejestracja sygnalow
-    signal(SIGUSR2, handle_signal); // Stop od Dyrektora
+    signal(SIGUSR2, handle_signal);
     signal(SIGTERM, handle_signal);
 
     char skladnik = argv[1][0];
@@ -90,11 +90,13 @@ int main(int argc, char *argv[]) {
 
     char log_buf[256];
 
-    sprintf(log_buf, "%s[DOSTAWCA-%c]%s PID:%d Start pracy (rozmiar jednostki: %d)\n", 
+    sprintf(log_buf, "%s[DOSTAWCA-%c]%s PID:%d Start pracy (rozmiar jednostki: %d)", 
             KOLOR_ZIELONY, skladnik, KOLOR_RESET, getpid(), rozmiar);
     wyslij_log(msg_id, log_buf);
     
     srand(time(NULL) + getpid());
+
+    int czy_czekam = 0;
 
     while (running) {
         int ilosc = (rand() % 2) + 1; // Male porcje (1-2)
@@ -109,15 +111,33 @@ int main(int argc, char *argv[]) {
         int wolne_fizycznie = MAGAZYN_POJEMNOSC - mag->suma_bajtow;
         if (wolne_fizycznie < potrzebne_miejsce) {
             sem_signal(sem_id, SEM_MUTEX);
-            usleep(10000); // Krotka przerwa
+
+            if (czy_czekam == 0) {
+                sprintf(log_buf, "%s[DOSTAWCA-%c]%s BRAK MIEJSCA DLA TEGO SKLADNIKU (%d/%d) - czekam...", 
+                    KOLOR_ZOLTY, skladnik, KOLOR_RESET, mag->suma_bajtow, MAGAZYN_POJEMNOSC);
+                wyslij_log(msg_id, log_buf);
+                czy_czekam = 1;
+            }
+
+            usleep(10000);
             continue;
         }
 
         if (!czy_bezpiecznie(mag, skladnik)) {
             sem_signal(sem_id, SEM_MUTEX);
+
+            if (czy_czekam == 0) {
+                sprintf(log_buf, "%s[DOSTAWCA-%c]%s LIMIT NADPRODUKCJI - czekam...", 
+                    KOLOR_ZOLTY, skladnik, KOLOR_RESET);
+                wyslij_log(msg_id, log_buf);
+                czy_czekam = 1;
+            }
+
             usleep(10000);
             continue;
         }
+
+        czy_czekam = 0;
 
         int wstawiono = 0;
         for (int k=0; k<ilosc; k++) {
@@ -143,7 +163,7 @@ int main(int argc, char *argv[]) {
         sleep((rand() % 3) + 1);
     }
     
-    sprintf(log_buf, "%s[DOSTAWCA-%c]%s Koniec pracy |\n", 
+    sprintf(log_buf, "%s[DOSTAWCA-%c]%s Koniec pracy", 
             KOLOR_CZERWONY, skladnik, KOLOR_RESET);
     wyslij_log(msg_id, log_buf);
     odlacz_pamiec_dzielona(mag);
