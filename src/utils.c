@@ -6,6 +6,7 @@
 #include <sys/sem.h>
 #include <sys/msg.h>
 #include <string.h>
+#include <time.h>
 #include "common.h"
 #include "utils.h"
 
@@ -419,15 +420,46 @@ void usun_kolejke(int msg_id) {
 
 // Funkcja do wysylania logow
 void wyslij_log(int msg_id, const char* tekst) {
-    // 1. Wypisz na ekran
-    printf("%s\n", tekst);
+    // Pobierany aktualny czas
+    time_t now = time(NULL);
+    struct tm *t = localtime(&now);
+    
+    // Formatowanie czasu
+    char czas_str[32];
+    strftime(czas_str, sizeof(czas_str), "%H:%M:%S", t);
 
-    // 2. Wyslij do kolejki (jesli istnieje)
+    // Pelna wiadomosc do wyslania
+    char pelna_wiadomosc[512];
+    
+    // Czyszczenie tekstu z potencjalnego \n na koncu
+    char tekst_clean[400];
+    strncpy(tekst_clean, tekst, sizeof(tekst_clean) - 1);
+    tekst_clean[sizeof(tekst_clean) - 1] = '\0';
+    // Znajdz \n i zamien na koniec stringa
+    size_t len = strlen(tekst_clean);
+    if (len > 0 && tekst_clean[len-1] == '\n') {
+        tekst_clean[len-1] = '\0';
+    }
+
+    // Polacz czas i tekst
+    snprintf(pelna_wiadomosc, sizeof(pelna_wiadomosc), "[%s] %s", czas_str, tekst_clean);
+
+    // Wypisz na ekran (dodajemy \n, bo usunelismy wyzej)
+    printf("%s\n", pelna_wiadomosc);
+
+    // Wyslij do kolejki (jesli istnieje) - to trafi do pliku raport.txt
     if (msg_id != -1) {
         Komunikat msg;
-        msg.mtype = 1; 
-        strncpy(msg.tekst, tekst, 255);
-        msg.tekst[255] = '\0';
-        msgsnd(msg_id, &msg, sizeof(msg.tekst), IPC_NOWAIT);
+        msg.mtype = 1;
+        
+        strncpy(msg.tekst, pelna_wiadomosc, sizeof(msg.tekst) - 1);
+        msg.tekst[sizeof(msg.tekst) - 1] = '\0';
+        
+        // msgsnd wysyla kopie do procesu logera (Dyrektora), ktory zapisze to w pliku
+        // Uzywamy IPC_NOWAIT, zeby nie blokowac procesu, jesli kolejka jest pelna
+        if (msgsnd(msg_id, &msg, sizeof(msg.tekst), IPC_NOWAIT) == -1) {
+            // Opcjonalnie: mozna obslozyc blad zapelnienia kolejki, ale w logach czesto sie to ignoruje
+        }
     }
 }
+
