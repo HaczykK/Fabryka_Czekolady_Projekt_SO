@@ -19,13 +19,13 @@ union semun {
 //#endif
 
 
-
-
 // Inicjalizacja pojedynczej kolejki FIFO
 void inicjalizuj_kolejke(RingQueue* q) {
     q->head = 0;
     q->tail = 0;
     q->count = 0;
+    // Wyzerowanie bufora dla bezpieczenstwa
+    memset(q->dane, 0, KOLEJKA_POJEMNOSC); 
 }
 
 void inicjalizuj_magazyn(Magazyn* mag) {
@@ -85,6 +85,9 @@ int wstaw_do_kolejki(Magazyn* mag, char typ) {
     if (q->count >= KOLEJKA_POJEMNOSC) return 0;
     if (mag->suma_bajtow + rozmiar > MAGAZYN_POJEMNOSC) return 0;
     
+    // Zapisz dane fizycznie w tablicy
+    q->dane[q->head] = typ;
+
     // Wstaw na head (FIFO - wstawiamy na koniec)
     q->head = (q->head + 1) % KOLEJKA_POJEMNOSC;
     q->count++;
@@ -103,12 +106,17 @@ int pobierz_z_kolejki(Magazyn* mag, char typ) {
     
     int rozmiar = rozmiar_skladnika(typ);
     
+    // Odczytaj dane z tablicy
+    char pobrany_bajt = q->dane[q->tail]; // (Mozna uzyc pozniej, np. do logow)
+
     // Pobierz z tail (FIFO - pobieramy z poczatku)
     q->tail = (q->tail + 1) % KOLEJKA_POJEMNOSC;
     q->count--;
     mag->suma_bajtow -= rozmiar;
     
-    return 1;
+    // Zwracamy pobrany znak (np. 'A') zamiast tylko 1
+    // Poniewaz znak > 0, nadal dziala to jako "true" w warunkach logicznych
+    return (int)pobrany_bajt;
 }
 
 // Zwraca liczbe skladnikow danego typu w magazynie
@@ -152,10 +160,10 @@ void wyswietl_stan_magazynu(int msg_id, Magazyn* mag) {
     sprintf(log_buf, "%s%s+--------------------------------------------+%s", KOLOR_BOLD, KOLOR_CYAN, KOLOR_RESET);
     wyslij_log(msg_id, log_buf);
     sprintf(log_buf, "|  Zajete: %s%4d%s / %4d bajtow (%s%3d%%%s)         |", 
-           kolor_zapelnienia, mag->suma_bajtow, KOLOR_RESET, 
-           MAGAZYN_POJEMNOSC, kolor_zapelnienia, procent, KOLOR_RESET);
+            kolor_zapelnienia, mag->suma_bajtow, KOLOR_RESET, 
+            MAGAZYN_POJEMNOSC, kolor_zapelnienia, procent, KOLOR_RESET);
     wyslij_log(msg_id, log_buf);
-    sprintf(log_buf,"|  Wolne:  %4d bajtow                       |", MAGAZYN_POJEMNOSC - mag->suma_bajtow);
+    sprintf(log_buf,"|  Wolne:  %4d bajtow                        |", MAGAZYN_POJEMNOSC - mag->suma_bajtow);
     wyslij_log(msg_id, log_buf);
     
     // Pasek postepu
@@ -477,4 +485,3 @@ void wyslij_log(int msg_id, const char* tekst) {
         }
     }
 }
-

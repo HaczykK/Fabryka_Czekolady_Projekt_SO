@@ -59,6 +59,7 @@ typedef struct {
 
 // Ring buffer FIFO dla pojedynczego typu skladnika
 typedef struct {
+    char dane[KOLEJKA_POJEMNOSC]; // <--- ZMIANA: Fizyczna tablica na dane
     int head;       // Indeks do wstawiania
     int tail;       // Indeks do pobierania
     int count;      // Liczba elementow w kolejce
