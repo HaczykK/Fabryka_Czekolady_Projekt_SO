@@ -37,7 +37,7 @@
 // Klucze IPC
 #define SHM_KEY 0x1234
 #define SEM_KEY 0x5678
-#define KLUCZ_MSG 0x9999
+// USUNIETO KLUCZ_MSG
 
 // Indeksy semaforow
 #define SEM_MUTEX 0       // Mutex do ochrony magazynu
@@ -46,20 +46,17 @@
 #define SEM_SKLAD_B 3     // Dostepnosc skladnika B
 #define SEM_SKLAD_C 4     // Dostepnosc skladnika C
 #define SEM_SKLAD_D 5     // Dostepnosc skladnika D
-#define SEM_COUNT 6       // Laczna liczba semaforow
+#define SEM_LOG 6         // <--- NOWY: Mutex do pliku raport.txt
+#define SEM_COUNT 7       // Laczna liczba semaforow (bylo 6)
 
-typedef struct {
-    long mtype;       // Typ komunikatu (musi byc > 0)
-    char tekst[512];  // Tresc wiadomosci
-} Komunikat;
-
+// USUNIETO STRUKTURE KOMUNIKAT - niepotrzebna
 
 // Pojemnosc kolejek per skladnik (~25% kazdej)
 #define KOLEJKA_POJEMNOSC 12
 
 // Ring buffer FIFO dla pojedynczego typu skladnika
 typedef struct {
-    char dane[KOLEJKA_POJEMNOSC]; // <--- ZMIANA: Fizyczna tablica na dane
+    char dane[KOLEJKA_POJEMNOSC]; // Fizyczna tablica na dane
     int head;       // Indeks do wstawiania
     int tail;       // Indeks do pobierania
     int count;      // Liczba elementow w kolejce

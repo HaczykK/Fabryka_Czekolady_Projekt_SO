@@ -42,13 +42,13 @@ int main(int argc, char *argv[]) {
     int shm_id = polacz_magazyn_z_pamiecia_dzielona();
     Magazyn* mag = polacz_z_pamiecia_dzielona(shm_id);
     int sem_id = polacz_semafory();
-    int msg_id = polacz_kolejke();
+    // msg_id USUNIETY
    
     char log_buf[256];
 
     sprintf(log_buf, "%s[PRACOWNIK-%d]%s PID:%d Start - produkuje czekolade %s", 
             KOLOR_CYAN, stanowisko, KOLOR_RESET, getpid(), typ_czekolady);
-    wyslij_log(msg_id, log_buf); 
+    wyslij_log(sem_id, log_buf); 
 
     srand(time(NULL) + getpid());
     int wyprodukowano = 0;
@@ -57,8 +57,6 @@ int main(int argc, char *argv[]) {
     
     while (running) {
         // Atomowe pobieranie skladnikow (try-lock pattern)
-        // Zamiast czekac na semafory po kolei (ryzyko deadlock),
-        // sprawdzamy dostepnosc wszystkich skladnikow naraz
         
         sem_wait(sem_id, SEM_MUTEX);
         if (!running) {
@@ -73,7 +71,7 @@ int main(int argc, char *argv[]) {
             if (czy_czekam == 0) {
                 sprintf(log_buf, "%s[PRACOWNIK-%d]%s Czekam na skladniki...", 
                         KOLOR_NIEBIESKI, stanowisko, KOLOR_RESET);
-                wyslij_log(msg_id, log_buf);
+                wyslij_log(sem_id, log_buf);
                 czy_czekam = 1; // Ustawiamy flage
             }
 
@@ -99,7 +97,7 @@ int main(int argc, char *argv[]) {
                 KOLOR_CYAN, stanowisko, KOLOR_RESET,
                 mag->suma_bajtow, MAGAZYN_POJEMNOSC);
 
-        wyslij_log(msg_id, log_buf);
+        wyslij_log(sem_id, log_buf);
 
         sem_signal(sem_id, SEM_MUTEX);
 
@@ -118,13 +116,13 @@ int main(int argc, char *argv[]) {
         wyprodukowano++;
         sprintf(log_buf, "%s%s[PRACOWNIK-%d] *** WYPRODUKOWANO CZEKOLADE - %s  #%d ***%s", 
                 KOLOR_BOLD, KOLOR_MAGENTA, stanowisko, typ_czekolady, wyprodukowano, KOLOR_RESET);
-        wyslij_log(msg_id, log_buf);
+        wyslij_log(sem_id, log_buf);
     }
 
     sprintf(log_buf, "%s[PRACOWNIK-%d]%s Koniec. Wyprodukowano: %s%d%s czekolady %s", 
             KOLOR_CZERWONY, stanowisko, KOLOR_RESET, 
             KOLOR_BOLD, wyprodukowano, KOLOR_RESET, typ_czekolady);
-    wyslij_log(msg_id, log_buf);
+    wyslij_log(sem_id, log_buf);
     odlacz_pamiec_dzielona(mag);
     return 0;
 }

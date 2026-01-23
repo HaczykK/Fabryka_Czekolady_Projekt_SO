@@ -86,13 +86,13 @@ int main(int argc, char *argv[]) {
     int shm_id = polacz_magazyn_z_pamiecia_dzielona();
     Magazyn* mag = polacz_z_pamiecia_dzielona(shm_id);
     int sem_id = polacz_semafory();
-    int msg_id = polacz_kolejke();
+    // msg_id USUNIETY
 
     char log_buf[256];
 
     sprintf(log_buf, "%s[DOSTAWCA-%c]%s PID:%d Start pracy (rozmiar jednostki: %d)", 
             KOLOR_ZIELONY, skladnik, KOLOR_RESET, getpid(), rozmiar);
-    wyslij_log(msg_id, log_buf);
+    wyslij_log(sem_id, log_buf);
     
     srand(time(NULL) + getpid());
 
@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
             if (czy_czekam == 0) {
                 sprintf(log_buf, "%s[DOSTAWCA-%c]%s BRAK MIEJSCA DLA TEGO SKLADNIKU (%d/%d) - czekam...", 
                     KOLOR_ZOLTY, skladnik, KOLOR_RESET, mag->suma_bajtow, MAGAZYN_POJEMNOSC);
-                wyslij_log(msg_id, log_buf);
+                wyslij_log(sem_id, log_buf);
                 czy_czekam = 1;
             }
 
@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
             if (czy_czekam == 0) {
                 sprintf(log_buf, "%s[DOSTAWCA-%c]%s LIMIT NADPRODUKCJI - czekam...", 
                     KOLOR_ZOLTY, skladnik, KOLOR_RESET);
-                wyslij_log(msg_id, log_buf);
+                wyslij_log(sem_id, log_buf);
                 czy_czekam = 1;
             }
 
@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
                     KOLOR_ZIELONY, skladnik, KOLOR_RESET,
                     KOLOR_BOLD, wstawiono, skladnik, KOLOR_RESET,
                     mag->suma_bajtow, MAGAZYN_POJEMNOSC);
-            wyslij_log(msg_id, log_buf);
+            wyslij_log(sem_id, log_buf);
         }
 
         sem_signal(sem_id, SEM_MUTEX);
@@ -165,7 +165,7 @@ int main(int argc, char *argv[]) {
     
     sprintf(log_buf, "%s[DOSTAWCA-%c]%s Koniec pracy", 
             KOLOR_CZERWONY, skladnik, KOLOR_RESET);
-    wyslij_log(msg_id, log_buf);
+    wyslij_log(sem_id, log_buf);
     odlacz_pamiec_dzielona(mag);
     return 0;
 }

@@ -4,7 +4,6 @@
 #include <sys/shm.h>
 #include <errno.h>
 #include <sys/sem.h>
-#include <sys/msg.h>
 #include <string.h>
 #include <time.h>
 #include "common.h"
@@ -64,10 +63,10 @@ int czy_mozna_wstawic(Magazyn* mag, char typ) {
     if (q == NULL) return 0;
     
     int rozmiar = rozmiar_skladnika(typ);
-    
+
     // Sprawdz limit kolejki
     if (q->count >= KOLEJKA_POJEMNOSC) return 0;
-    
+
     // Sprawdz limit calkowitej pojemnosci magazynu
     if (mag->suma_bajtow + rozmiar > MAGAZYN_POJEMNOSC) return 0;
     
@@ -80,7 +79,7 @@ int wstaw_do_kolejki(Magazyn* mag, char typ) {
     if (q == NULL) return 0;
     
     int rozmiar = rozmiar_skladnika(typ);
-    
+
     // Sprawdz limity
     if (q->count >= KOLEJKA_POJEMNOSC) return 0;
     if (mag->suma_bajtow + rozmiar > MAGAZYN_POJEMNOSC) return 0;
@@ -100,22 +99,20 @@ int wstaw_do_kolejki(Magazyn* mag, char typ) {
 int pobierz_z_kolejki(Magazyn* mag, char typ) {
     RingQueue* q = pobierz_kolejke(mag, typ);
     if (q == NULL) return 0;
-    
+
     // Sprawdz czy jest co pobrac
     if (q->count <= 0) return 0;
     
     int rozmiar = rozmiar_skladnika(typ);
     
     // Odczytaj dane z tablicy
-    char pobrany_bajt = q->dane[q->tail]; // (Mozna uzyc pozniej, np. do logow)
-
+    char pobrany_bajt = q->dane[q->tail];
+    
     // Pobierz z tail (FIFO - pobieramy z poczatku)
     q->tail = (q->tail + 1) % KOLEJKA_POJEMNOSC;
     q->count--;
     mag->suma_bajtow -= rozmiar;
     
-    // Zwracamy pobrany znak (np. 'A') zamiast tylko 1
-    // Poniewaz znak > 0, nadal dziala to jako "true" w warunkach logicznych
     return (int)pobrany_bajt;
 }
 
@@ -127,7 +124,7 @@ int zlicz_skladnik(Magazyn* mag, char typ) {
 }
 
 // Wyswietla stan magazynu
-void wyswietl_stan_magazynu(int msg_id, Magazyn* mag) {
+void wyswietl_stan_magazynu(int sem_id, Magazyn* mag) {
     char log_buf[256];
 
     int count_a = mag->kolejka_A.count;
@@ -142,55 +139,44 @@ void wyswietl_stan_magazynu(int msg_id, Magazyn* mag) {
     else kolor_zapelnienia = KOLOR_CZERWONY;
 
     sprintf(log_buf, " ");
-    wyslij_log(msg_id, log_buf);
+    wyslij_log(sem_id, log_buf);
     sprintf(log_buf, "%s%s+--------------------------------------------+", KOLOR_BOLD, KOLOR_CYAN);
-    wyslij_log(msg_id, log_buf);
+    wyslij_log(sem_id, log_buf);
     sprintf(log_buf, "|          STAN MAGAZYNU (RING BUFFER)       |");
-    wyslij_log(msg_id, log_buf);
+    wyslij_log(sem_id, log_buf);
     sprintf(log_buf, "+--------------------------------------------+%s", KOLOR_RESET);
-    wyslij_log(msg_id, log_buf);
+    wyslij_log(sem_id, log_buf);
     sprintf(log_buf, "|  %sSkladnik A:%s %3d szt. (%3d bajtow)         |", KOLOR_ZIELONY, KOLOR_RESET, count_a, count_a * ROZMIAR_A);
-    wyslij_log(msg_id, log_buf);
+    wyslij_log(sem_id, log_buf);
     sprintf(log_buf, "|  %sSkladnik B:%s %3d szt. (%3d bajtow)         |", KOLOR_ZIELONY, KOLOR_RESET, count_b, count_b * ROZMIAR_B);
-    wyslij_log(msg_id, log_buf);
+    wyslij_log(sem_id, log_buf);
     sprintf(log_buf, "|  %sSkladnik C:%s %3d szt. (%3d bajtow)         |", KOLOR_ZIELONY, KOLOR_RESET, count_c, count_c * ROZMIAR_C);
-    wyslij_log(msg_id, log_buf);
+    wyslij_log(sem_id, log_buf);
     sprintf(log_buf, "|  %sSkladnik D:%s %3d szt. (%3d bajtow)         |", KOLOR_ZIELONY, KOLOR_RESET, count_d, count_d * ROZMIAR_D);
-    wyslij_log(msg_id, log_buf);
+    wyslij_log(sem_id, log_buf);
     sprintf(log_buf, "%s%s+--------------------------------------------+%s", KOLOR_BOLD, KOLOR_CYAN, KOLOR_RESET);
-    wyslij_log(msg_id, log_buf);
+    wyslij_log(sem_id, log_buf);
     sprintf(log_buf, "|  Zajete: %s%4d%s / %4d bajtow (%s%3d%%%s)         |", 
             kolor_zapelnienia, mag->suma_bajtow, KOLOR_RESET, 
             MAGAZYN_POJEMNOSC, kolor_zapelnienia, procent, KOLOR_RESET);
-    wyslij_log(msg_id, log_buf);
+    wyslij_log(sem_id, log_buf);
     sprintf(log_buf,"|  Wolne:  %4d bajtow                        |", MAGAZYN_POJEMNOSC - mag->suma_bajtow);
-    wyslij_log(msg_id, log_buf);
-    
-    // Pasek postepu
-    /*printf("|  [");
-    for(int i = 0; i < 40; i++) {
-        if (i < (procent * 40) / 100) {
-            printf("%s#%s", kolor_zapelnienia, KOLOR_RESET);
-        } else {
-            printf("-");
-        }
-    }
-    printf("]|\n");*/
+    wyslij_log(sem_id, log_buf);
     
     sprintf(log_buf, "%s%s+--------------------------------------------+%s\n", KOLOR_BOLD, KOLOR_CYAN, KOLOR_RESET);
-    wyslij_log(msg_id, log_buf);
+    wyslij_log(sem_id, log_buf);
     sprintf(log_buf, "\n");
-    wyslij_log(msg_id, log_buf);
+    wyslij_log(sem_id, log_buf);
 }
 
 // Pamiec dzielona
 
 int utworz_pamiec_dzielona() {
     int shm_id = shmget(SHM_KEY, sizeof(Magazyn), IPC_CREAT | 0600);
-    
-    if(shm_id == -1) {
+
+    if(shm_id == -1) { 
         perror("shmget");
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE); 
     }
 
     printf("[SHM] Utworzono pamiec dzielono (ID: %d)\n", shm_id);
@@ -200,9 +186,9 @@ int utworz_pamiec_dzielona() {
 Magazyn* polacz_z_pamiecia_dzielona(int shm_id) {
     Magazyn* mag = (Magazyn*) shmat(shm_id, NULL, 0);
 
-    if(mag == (void*) -1) {
-        perror("shmat");
-        exit(EXIT_FAILURE);
+    if(mag == (void*) -1) { 
+        perror("shmat"); 
+        exit(EXIT_FAILURE); 
     }
 
     printf("[SHM] Polaczono z pamiecia dzielona (ID: %d)\n", shm_id);
@@ -211,18 +197,18 @@ Magazyn* polacz_z_pamiecia_dzielona(int shm_id) {
 }
 
 void odlacz_pamiec_dzielona(Magazyn* mag) {
-    if(shmdt(mag) == -1) {
-        perror("shmdt");
-        exit(EXIT_FAILURE);
+    if(shmdt(mag) == -1) { 
+        perror("shmdt"); 
+        exit(EXIT_FAILURE); 
     }
 
     printf("[SHM] Odloczono od pamieci dzielonej\n");
 }
 
 void usun_pamiec_dzielona(int shm_id) {
-    if (shmctl(shm_id, IPC_RMID, NULL) == -1) {
-        perror("shmctl");
-        exit(EXIT_FAILURE);
+    if (shmctl(shm_id, IPC_RMID, NULL) == -1) { 
+        perror("shmctl"); 
+        exit(EXIT_FAILURE); 
     }
 
     printf("[SHM] Usunieto pamiec dzielona (ID: %d)\n", shm_id);
@@ -233,12 +219,12 @@ void usun_pamiec_dzielona(int shm_id) {
 
 int utworz_semafory() {
     int sem_id = semget(SEM_KEY, SEM_COUNT, IPC_CREAT | 0600);
-    
-    if (sem_id == -1) {
-        perror("semget");
-        exit(EXIT_FAILURE);
+
+    if (sem_id == -1) { 
+        perror("semget"); 
+        exit(EXIT_FAILURE); 
     }
-    
+
     printf("[SEM] Utworzono zestaw semaforow (ID: %d, liczba: %d)\n", sem_id, SEM_COUNT);
     return sem_id;
 }
@@ -246,23 +232,30 @@ int utworz_semafory() {
 void inicjalizuj_semafory(int sem_id) {
     union semun arg;
     
-    //mutex binarny (1 = wolny)
+    // SEM_MUTEX (pamiec) -> 1 (wolny)
     arg.val = 1;
-    if (semctl(sem_id, SEM_MUTEX, SETVAL, arg) == -1) {
-        perror("semctl SEM_MUTEX");
-        exit(EXIT_FAILURE);
+    if (semctl(sem_id, SEM_MUTEX, SETVAL, arg) == -1) { 
+        perror("semctl SEM_MUTEX"); 
+        exit(EXIT_FAILURE); 
     }
     
-    //liczba wolnych jednostek
+    // SEM_WOLNE -> Pojemnosc
     arg.val = MAGAZYN_POJEMNOSC;
-    if (semctl(sem_id, SEM_WOLNE, SETVAL, arg) == -1) {
-        perror("semctl SEM_WOLNE");
-        exit(EXIT_FAILURE);
+    if (semctl(sem_id, SEM_WOLNE, SETVAL, arg) == -1) { 
+        perror("semctl SEM_WOLNE"); 
+        exit(EXIT_FAILURE); 
     }
     
-    // Semafory skladnikow - na poczatku 0 (brak skladnikow)
+    // SEM_SKLAD_x -> 0
     arg.val = 0;
     for(int i=SEM_SKLAD_A; i<=SEM_SKLAD_D; i++) semctl(sem_id, i, SETVAL, arg);
+
+    // SEM_LOG -> 1 (wolny - zeby mozna bylo pisac do pliku)
+    arg.val = 1;
+    if (semctl(sem_id, SEM_LOG, SETVAL, arg) == -1) { 
+        perror("semctl SEM_LOG"); 
+        exit(EXIT_FAILURE); 
+    }
 }
 
 void zaktualizuj_semafory(int sem_id, Magazyn* mag) {
@@ -274,14 +267,17 @@ void zaktualizuj_semafory(int sem_id, Magazyn* mag) {
     arg.val = mag->kolejka_B.count; semctl(sem_id, SEM_SKLAD_B, SETVAL, arg);
     arg.val = mag->kolejka_C.count; semctl(sem_id, SEM_SKLAD_C, SETVAL, arg);
     arg.val = mag->kolejka_D.count; semctl(sem_id, SEM_SKLAD_D, SETVAL, arg);
+    
+    // SEM_LOG zawsze resetujemy na 1 (bezpiecznik)
+    arg.val = 1; semctl(sem_id, SEM_LOG, SETVAL, arg);
 }
 
 void usun_semafory(int sem_id) {
-    if (semctl(sem_id, 0, IPC_RMID) == -1) {
-        perror("semctl IPC_RMID");
-        exit(EXIT_FAILURE);
+    if (semctl(sem_id, 0, IPC_RMID) == -1) { 
+        perror("semctl IPC_RMID"); 
+        exit(EXIT_FAILURE); 
     }
-    
+
     printf("[SEM] Usunieto semafory (ID: %d)\n", sem_id);
 }
 
@@ -293,8 +289,8 @@ void sem_wait(int sem_id, int sem_num) {
     
     if (semop(sem_id, &op, 1) == -1) {
         if (errno == EINTR) {
-            return; 
-        }
+            return;
+        } 
         perror("semop wait");
         exit(EXIT_FAILURE);
     }
@@ -306,18 +302,17 @@ void sem_signal(int sem_id, int sem_num) {
     op.sem_op = 1;
     op.sem_flg = 0;
     
-    if (semop(sem_id, &op, 1) == -1) {
-        perror("semop signal");
-        exit(EXIT_FAILURE);
+    if (semop(sem_id, &op, 1) == -1) { 
+        perror("semop signal"); 
+        exit(EXIT_FAILURE); 
     }
 }
 
 int sem_getval(int sem_id, int sem_num) {
     int val = semctl(sem_id, sem_num, GETVAL);
-    
-    if (val == -1) {
-        perror("semctl GETVAL");
-        exit(EXIT_FAILURE);
+    if (val == -1) { 
+        perror("semctl GETVAL"); 
+        exit(EXIT_FAILURE); 
     }
     
     return val;
@@ -327,9 +322,9 @@ int sem_getval(int sem_id, int sem_num) {
 int polacz_semafory() {
     int sem_id = semget(SEM_KEY, SEM_COUNT, 0);
 
-    if(sem_id == -1) {
-        perror("semget polacz");
-        exit(EXIT_FAILURE);
+    if(sem_id == -1) { 
+        perror("semget polacz"); 
+        exit(EXIT_FAILURE); 
     }
 
     return sem_id;
@@ -338,9 +333,9 @@ int polacz_semafory() {
 int polacz_magazyn_z_pamiecia_dzielona() {
     int shm_id = shmget(SHM_KEY, sizeof(Magazyn), 0);
 
-    if(shm_id == -1) {
-        perror("shmget polacz");
-        exit(EXIT_FAILURE);
+    if(shm_id == -1) { 
+        perror("shmget polacz"); 
+        exit(EXIT_FAILURE); 
     }
 
     return shm_id;
@@ -350,9 +345,9 @@ int polacz_magazyn_z_pamiecia_dzielona() {
 
 int zapisz_stan_magazynu(Magazyn* mag, const char* plik) {
     FILE* f = fopen(plik, "wb");
-    if (f == NULL) {
-        perror("fopen zapis");
-        return -1;
+    if (f == NULL) { 
+        perror("fopen zapis"); 
+        return -1; 
     }
     
     size_t written = fwrite(mag, sizeof(Magazyn), 1, f);
@@ -362,10 +357,7 @@ int zapisz_stan_magazynu(Magazyn* mag, const char* plik) {
         return -1;
     }
     
-    printf("[PLIK] Zapisano stan. Magazyn zajety: %d/%d (A:%d B:%d C:%d D:%d)\n", 
-           mag->suma_bajtow, MAGAZYN_POJEMNOSC, 
-           mag->kolejka_A.count, mag->kolejka_B.count, 
-           mag->kolejka_C.count, mag->kolejka_D.count);
+    printf("[PLIK] Zapisano stan. Magazyn zajety: %d/%d\n", mag->suma_bajtow, MAGAZYN_POJEMNOSC);
     return 0;
 }
 
@@ -391,14 +383,10 @@ int odczytaj_stan_magazynu(Magazyn* mag, const char* plik) {
         mag->kolejka_D.count * ROZMIAR_D;
     
     if (mag->suma_bajtow != faktycznie_zajete) {
-        printf("[FIX] Wykryto blad danych! Plik twierdzil %d, a suma kolejek to %d.\n", 
-               mag->suma_bajtow, faktycznie_zajete);
-        printf("[FIX] Naprawiam licznik suma_bajtow...\n");
+        printf("[FIX] Wykryto blad danych! Naprawiam...\n");
         mag->suma_bajtow = faktycznie_zajete;
     }
-
-    printf("[PLIK] Odczytano i zweryfikowano stan. Zajete: %d/%d\n", 
-           mag->suma_bajtow, MAGAZYN_POJEMNOSC);
+    printf("[PLIK] Odczytano stan.\n");
     return 0;
 }
 
@@ -411,54 +399,21 @@ int czy_istnieje_plik_stanu(const char* plik) {
     return 1;  // Istnieje
 }
 
-
-// Kolejki
-int utworz_kolejke() {
-    int msg_id = msgget(KLUCZ_MSG, IPC_CREAT | 0600);
-    if (msg_id == -1) {
-        perror("msgget utworz");
-        exit(EXIT_FAILURE);
-    }
-
-    printf("[MSG] Utworzono kolejke komunikatow (ID: %d)\n", msg_id);
-
-    return msg_id;
-}
-
-int polacz_kolejke() {
-    int msg_id = msgget(KLUCZ_MSG, 0);
-    if (msg_id == -1) { 
-        perror("msgget polacz"); 
-        exit(EXIT_FAILURE); 
-    }
-    
-    return msg_id;
-}
-
-void usun_kolejke(int msg_id) {
-    if (msg_id != -1) msgctl(msg_id, IPC_RMID, NULL);
-
-    printf("[MSG] Usunieto kolejke komunikatow (ID: %d)\n", msg_id);
-}
-
-// Funkcja do wysylania logow
-void wyslij_log(int msg_id, const char* tekst) {
+// Funkcja do wysylania logow 
+void wyslij_log(int sem_id, const char* tekst) {
     // Pobierany aktualny czas
     time_t now = time(NULL);
     struct tm *t = localtime(&now);
-    
+
     // Formatowanie czasu
     char czas_str[32];
     strftime(czas_str, sizeof(czas_str), "%H:%M:%S", t);
 
     // Pelna wiadomosc do wyslania
     char pelna_wiadomosc[512];
-    
-    // Czyszczenie tekstu z potencjalnego \n na koncu
     char tekst_clean[400];
     strncpy(tekst_clean, tekst, sizeof(tekst_clean) - 1);
     tekst_clean[sizeof(tekst_clean) - 1] = '\0';
-    // Znajdz \n i zamien na koniec stringa
     size_t len = strlen(tekst_clean);
     if (len > 0 && tekst_clean[len-1] == '\n') {
         tekst_clean[len-1] = '\0';
@@ -467,21 +422,22 @@ void wyslij_log(int msg_id, const char* tekst) {
     // Polacz czas i tekst
     snprintf(pelna_wiadomosc, sizeof(pelna_wiadomosc), "[%s] %s", czas_str, tekst_clean);
 
-    // Wypisz na ekran (dodajemy \n, bo usunelismy wyzej)
+    // Wypisz na ekran
     printf("%s\n", pelna_wiadomosc);
+    fflush(stdout);
 
-    // Wyslij do kolejki (jesli istnieje) - to trafi do pliku raport.txt
-    if (msg_id != -1) {
-        Komunikat msg;
-        msg.mtype = 1;
+    // Zapisz do pliku chronionego semaforem
+    if (sem_id != -1) {
+        sem_wait(sem_id, SEM_LOG); // <--- ZAJMUJEMY PLIK
         
-        strncpy(msg.tekst, pelna_wiadomosc, sizeof(msg.tekst) - 1);
-        msg.tekst[sizeof(msg.tekst) - 1] = '\0';
-        
-        // msgsnd wysyla kopie do procesu logera (Dyrektora), ktory zapisze to w pliku
-        // Uzywamy IPC_NOWAIT, zeby nie blokowac procesu, jesli kolejka jest pelna
-        if (msgsnd(msg_id, &msg, sizeof(msg.tekst), IPC_NOWAIT) == -1) {
-            // Opcjonalnie: mozna obslozyc blad zapelnienia kolejki, ale w logach czesto sie to ignoruje
+        FILE* f = fopen(PLIK_RAPORTU, "a");
+        if (f) {
+            fprintf(f, "%s\n", pelna_wiadomosc);
+            fclose(f);
+        } else {
+            perror("Blad otwarcia raportu");
         }
+        
+        sem_signal(sem_id, SEM_LOG); // <--- ZWALNIAMY PLIK
     }
 }

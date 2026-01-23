@@ -15,8 +15,8 @@ int wstaw_do_kolejki(Magazyn* mag, char typ);
 int pobierz_z_kolejki(Magazyn* mag, char typ);
 int zlicz_skladnik(Magazyn* mag, char typ);
 
-// Wyswietlanie stanu magazynu
-void wyswietl_stan_magazynu(int msg_id, Magazyn* mag);
+// Wyswietlanie stanu magazynu (przyjmuje sem_id zamiast msg_id)
+void wyswietl_stan_magazynu(int sem_id, Magazyn* mag);
 
 // Pamiec dzielona
 int utworz_pamiec_dzielona();
@@ -42,12 +42,9 @@ int zapisz_stan_magazynu(Magazyn* mag, const char* plik);
 int odczytaj_stan_magazynu(Magazyn* mag, const char* plik);
 int czy_istnieje_plik_stanu(const char* plik);
 
-// Kolejka komunikatow
-int utworz_kolejke();
-int polacz_kolejke();
-void usun_kolejke(int msg_id);
+// USUNIETO funkcje kolejki komunikatow
 
-// Ta funkcja zastepuje printf - wysyla na ekran I do pliku (przez kolejke)
-void wyslij_log(int msg_id, const char* tekst);
+// Ta funkcja zastepuje printf - zapisuje do pliku chronionego semaforem
+void wyslij_log(int sem_id, const char* tekst);
 
 #endif
