@@ -37,22 +37,31 @@
 // Klucze IPC
 #define SHM_KEY 0x1234
 #define SEM_KEY 0x5678
-// USUNIETO KLUCZ_MSG
 
 // Indeksy semaforow
-#define SEM_MUTEX 0       // Mutex do ochrony magazynu
-#define SEM_WOLNE 1       // Liczba wolnych jednostek
-#define SEM_SKLAD_A 2     // Dostepnosc skladnika A
-#define SEM_SKLAD_B 3     // Dostepnosc skladnika B
-#define SEM_SKLAD_C 4     // Dostepnosc skladnika C
-#define SEM_SKLAD_D 5     // Dostepnosc skladnika D
-#define SEM_LOG 6         // <--- NOWY: Mutex do pliku raport.txt
-#define SEM_COUNT 7       // Laczna liczba semaforow (bylo 6)
+#define SEM_MUTEX 0       // Mutex do ochrony pamieci
+#define SEM_WOLNE 1       // Liczba wolnych bajtow w magazynie
 
-// USUNIETO STRUKTURE KOMUNIKAT - niepotrzebna
+// Dostepnosc towarow 
+#define SEM_SKLAD_A 2     
+#define SEM_SKLAD_B 3     
+#define SEM_SKLAD_C 4     
+#define SEM_SKLAD_D 5
 
-// Pojemnosc kolejek per skladnik (~25% kazdej)
-#define KOLEJKA_POJEMNOSC 12
+// Limit miejsca w kolejkach 
+#define SEM_LIMIT_A 6
+#define SEM_LIMIT_B 7
+#define SEM_LIMIT_C 8
+#define SEM_LIMIT_D 9
+
+// Logowanie
+#define SEM_LOG 10
+
+// Laczna liczba semaforow
+#define SEM_COUNT 11       
+
+// Pojemnosc kolejek dla kazdego skladnika - 7 * 7 bajtow = 49 < 50
+#define KOLEJKA_POJEMNOSC 7
 
 // Ring buffer FIFO dla pojedynczego typu skladnika
 typedef struct {

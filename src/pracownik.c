@@ -4,6 +4,7 @@
 #include <time.h>
 #include <signal.h>
 #include <string.h>
+#include <sys/sem.h>
 #include "common.h"
 #include "utils.h"
 
@@ -12,20 +13,6 @@ volatile sig_atomic_t running = 1;
 void handle_signal(int sig) {
     (void)sig;
     running = 0;
-}
-
-// Sprawdza czy wszystkie potrzebne skladniki sa dostepne (atomowe sprawdzenie)
-int skladniki_dostepne(Magazyn* mag, int stanowisko) {
-    if (mag->kolejka_A.count < 1) return 0;
-    if (mag->kolejka_B.count < 1) return 0;
-    
-    if (stanowisko == 1) {
-        if (mag->kolejka_C.count < 1) return 0;
-    } else {
-        if (mag->kolejka_D.count < 1) return 0;
-    }
-    
-    return 1;
 }
 
 int main(int argc, char *argv[]) {
@@ -37,12 +24,11 @@ int main(int argc, char *argv[]) {
 
     int stanowisko = atoi(argv[1]);
     const char* typ_czekolady = (stanowisko == 1) ? "TYP_1 (A+B+C)" : "TYP_2 (A+B+D)";
-    
 
+    
     int shm_id = polacz_magazyn_z_pamiecia_dzielona();
     Magazyn* mag = polacz_z_pamiecia_dzielona(shm_id);
     int sem_id = polacz_semafory();
-    // msg_id USUNIETY
    
     char log_buf[256];
 
@@ -53,66 +39,84 @@ int main(int argc, char *argv[]) {
     srand(time(NULL) + getpid());
     int wyprodukowano = 0;
 
-    int czy_czekam = 0;
+    // Definiujemy operacje wait - czekanie na wszystkie skladniki
+    struct sembuf czekaj[3];
+    czekaj[0].sem_num = SEM_SKLAD_A; czekaj[0].sem_op = -1; czekaj[0].sem_flg = 0;
+    czekaj[1].sem_num = SEM_SKLAD_B; czekaj[1].sem_op = -1; czekaj[1].sem_flg = 0;
+    
+    if (stanowisko == 1) {
+        czekaj[2].sem_num = SEM_SKLAD_C;
+    } else {
+        czekaj[2].sem_num = SEM_SKLAD_D;
+    }
+    czekaj[2].sem_op = -1; czekaj[2].sem_flg = 0;
+
     
     while (running) {
-        // Atomowe pobieranie skladnikow (try-lock pattern)
-        
+
+        // Atomowe pobieranie skladnikow A, B i C/D jednoczesnie
+        if (semop(sem_id, czekaj, 3) == -1) {
+             if (!running) break;
+             continue;
+        }
+
         sem_wait(sem_id, SEM_MUTEX);
         if (!running) {
             sem_signal(sem_id, SEM_MUTEX);
             break;
         }
         
-        // Sprawdz czy wszystkie skladniki dostepne
-        if (!skladniki_dostepne(mag, stanowisko)) {
-            sem_signal(sem_id, SEM_MUTEX);
-
-            if (czy_czekam == 0) {
-                sprintf(log_buf, "%s[PRACOWNIK-%d]%s Czekam na skladniki...", 
-                        KOLOR_NIEBIESKI, stanowisko, KOLOR_RESET);
-                wyslij_log(sem_id, log_buf);
-                czy_czekam = 1; // Ustawiamy flage
-            }
-
-            usleep(10000); // Krotka przerwa i sprobuj ponownie
-            continue;
-        }
-
-        if (czy_czekam == 1) {
-             czy_czekam = 0; 
-        }
-        
-        // Atomowe pobranie wszystkich skladnikow z kolejek FIFO
-        pobierz_z_kolejki(mag, BAJT_A);
-        pobierz_z_kolejki(mag, BAJT_B);
+        // Pobranie danych
+        char a = (char)pobierz_z_kolejki(mag, BAJT_A);
+        char b = (char)pobierz_z_kolejki(mag, BAJT_B);
+        char c_or_d;
+        int zwolnione_bajty = ROZMIAR_A + ROZMIAR_B;
         
         if (stanowisko == 1) {
-            pobierz_z_kolejki(mag, BAJT_C);
+            c_or_d = (char)pobierz_z_kolejki(mag, BAJT_C);
+            zwolnione_bajty += ROZMIAR_C;
         } else {
-            pobierz_z_kolejki(mag, BAJT_D);
+            c_or_d = (char)pobierz_z_kolejki(mag, BAJT_D);
+            zwolnione_bajty += ROZMIAR_D;
         }
 
-        sprintf(log_buf, "%s[PRACOWNIK-%d]%s Pobrano skladniki | Magazyn zajety: %d/%d |", 
-                KOLOR_CYAN, stanowisko, KOLOR_RESET,
+        sprintf(log_buf, "%s[PRACOWNIK-%d]%s Pobrano: %c, %c, %c | Magazyn zajety: %d/%d |", 
+                KOLOR_CYAN, stanowisko, KOLOR_RESET, a, b, c_or_d,
                 mag->suma_bajtow, MAGAZYN_POJEMNOSC);
 
         wyslij_log(sem_id, log_buf);
 
         sem_signal(sem_id, SEM_MUTEX);
 
+        // Zwolnienie semaforow
+        struct sembuf zwolnij[4];
+        
+        // Zwroc bajty ogolne
+        zwolnij[0].sem_num = SEM_WOLNE;
+        zwolnij[0].sem_op = zwolnione_bajty;
+        zwolnij[0].sem_flg = 0;
 
-        sem_wait(sem_id, SEM_SKLAD_A);
-        sem_wait(sem_id, SEM_SKLAD_B);
+        // Zwroc slot dla A
+        zwolnij[1].sem_num = SEM_LIMIT_A;
+        zwolnij[1].sem_op = 1;
+        zwolnij[1].sem_flg = 0;
 
-        if (stanowisko == 1) {
-            sem_wait(sem_id, SEM_SKLAD_C);
-        } else {
-            sem_wait(sem_id, SEM_SKLAD_D);
-        }
+        // Zwroc slot dla B
+        zwolnij[2].sem_num = SEM_LIMIT_B;
+        zwolnij[2].sem_op = 1;
+        zwolnij[2].sem_flg = 0;
+
+        // Zwroc slot dla C lub D
+        if (stanowisko == 1) zwolnij[3].sem_num = SEM_LIMIT_C;
+        else zwolnij[3].sem_num = SEM_LIMIT_D;
+        zwolnij[3].sem_op = 1;
+        zwolnij[3].sem_flg = 0;
+
+        semop(sem_id, zwolnij, 4);
+
 
         // Produkcja
-        sleep((rand() % 5) + 1);
+        //sleep((rand() % 5) + 1);
         wyprodukowano++;
         sprintf(log_buf, "%s%s[PRACOWNIK-%d] *** WYPRODUKOWANO CZEKOLADE - %s  #%d ***%s", 
                 KOLOR_BOLD, KOLOR_MAGENTA, stanowisko, typ_czekolady, wyprodukowano, KOLOR_RESET);

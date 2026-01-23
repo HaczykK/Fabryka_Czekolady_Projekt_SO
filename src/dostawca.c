@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <signal.h>
+#include <sys/sem.h>
 #include <string.h>
 #include "common.h"
 #include "utils.h"
@@ -12,41 +13,6 @@ volatile sig_atomic_t running = 1;
 void handle_signal(int sig) {
     (void)sig;
     running = 0;
-}
-
-
-// Sprawdza czy mozna bezpiecznie wstawic skladnik (zapobiega deadlock)
-int czy_bezpiecznie(Magazyn* mag, char typ) {
-    int wolne = MAGAZYN_POJEMNOSC - mag->suma_bajtow;
-    
-    // Sprawdz limit kolejki dla tego skladnika
-    if (!czy_mozna_wstawic(mag, typ)) return 0;
-    
-    // 1 opcja: malo miejsca (<15) - Blokujemy skladniki zajmujace 2 i 3 bajty (C i D)
-    if (wolne < 10) {
-        int cnt_c = mag->kolejka_C.count;
-        int cnt_d = mag->kolejka_D.count;
-        
-        // Jesli jest juz jakies C lub D, to nie dokladaj kolejnych
-        if ((typ == 'C' && cnt_c > 0) || (typ == 'D' && cnt_d > 0)) return 0;
-    }
-
-    // 2 opcja: bardzo malo miejsca (<5) - tylko braki
-    if (wolne < 5) {
-        int val = zlicz_skladnik(mag, typ);
-        
-        // Wpuszczamy tylko jesli tego skladnika calkowicie brakuje
-        if (val == 0) return 1;
-        return 0;
-    }
-
-    // 3 opcja limit nadprodukcji (zeby nie zapchac magazynu samym A)
-    int limit = KOLEJKA_POJEMNOSC - 2; // Max 10 w kolejce
-    int val = zlicz_skladnik(mag, typ);
-    
-    if (val >= limit) return 0;
-
-    return 1;
 }
 
 int main(int argc, char *argv[]) {
@@ -59,23 +25,28 @@ int main(int argc, char *argv[]) {
     char skladnik = argv[1][0];
     int rozmiar; 
     int sem_skladnik;
+    int sem_limit;
 
     switch(skladnik) {
     case 'A':
         rozmiar = ROZMIAR_A;
         sem_skladnik = SEM_SKLAD_A;
+        sem_limit = SEM_LIMIT_A;
         break;
     case 'B':
         rozmiar = ROZMIAR_B;
         sem_skladnik = SEM_SKLAD_B;
+        sem_limit = SEM_LIMIT_B;
         break;
     case 'C':
         rozmiar = ROZMIAR_C;
         sem_skladnik = SEM_SKLAD_C;
+        sem_limit = SEM_LIMIT_C;
         break;
     case 'D':
         rozmiar = ROZMIAR_D;
         sem_skladnik = SEM_SKLAD_D;
+        sem_limit = SEM_LIMIT_D;
         break;
     default:
         fprintf(stderr, "Nieprawidlowy skladnik: %c\n", skladnik);
@@ -86,8 +57,7 @@ int main(int argc, char *argv[]) {
     int shm_id = polacz_magazyn_z_pamiecia_dzielona();
     Magazyn* mag = polacz_z_pamiecia_dzielona(shm_id);
     int sem_id = polacz_semafory();
-    // msg_id USUNIETY
-
+    
     char log_buf[256];
 
     sprintf(log_buf, "%s[DOSTAWCA-%c]%s PID:%d Start pracy (rozmiar jednostki: %d)", 
@@ -96,48 +66,35 @@ int main(int argc, char *argv[]) {
     
     srand(time(NULL) + getpid());
 
-    int czy_czekam = 0;
-
     while (running) {
         int ilosc = (rand() % 2) + 1; // Male porcje (1-2)
         int potrzebne_miejsce = ilosc * rozmiar;
         
+        // Tworzymy tablice operacji dla semop
+        struct sembuf czekaj[2];
+        
+        // Sprawdz czy sa wolne bajty w calym magazynie
+        czekaj[0].sem_num = SEM_WOLNE;
+        czekaj[0].sem_op = -potrzebne_miejsce;
+        czekaj[0].sem_flg = 0;
+
+        // Sprawdz czy jest wolne miejsce w limicie sztuk dla tego skladnika
+        czekaj[1].sem_num = sem_limit;
+        czekaj[1].sem_op = -ilosc;
+        czekaj[1].sem_flg = 0;
+
+        if (semop(sem_id, czekaj, 2) == -1) {
+            if (!running) break;
+            // Jesli to nie sygnal zakonczenia - sprobuj ponownie
+            continue;
+        }
+
+        // Sekcja krytyczna
         sem_wait(sem_id, SEM_MUTEX);
         if (!running) {
             sem_signal(sem_id, SEM_MUTEX);
             break;
         }
-
-        int wolne_fizycznie = MAGAZYN_POJEMNOSC - mag->suma_bajtow;
-        if (wolne_fizycznie < potrzebne_miejsce) {
-            sem_signal(sem_id, SEM_MUTEX);
-
-            if (czy_czekam == 0) {
-                sprintf(log_buf, "%s[DOSTAWCA-%c]%s BRAK MIEJSCA DLA TEGO SKLADNIKU (%d/%d) - czekam...", 
-                    KOLOR_ZOLTY, skladnik, KOLOR_RESET, mag->suma_bajtow, MAGAZYN_POJEMNOSC);
-                wyslij_log(sem_id, log_buf);
-                czy_czekam = 1;
-            }
-
-            usleep(10000);
-            continue;
-        }
-
-        if (!czy_bezpiecznie(mag, skladnik)) {
-            sem_signal(sem_id, SEM_MUTEX);
-
-            if (czy_czekam == 0) {
-                sprintf(log_buf, "%s[DOSTAWCA-%c]%s LIMIT NADPRODUKCJI - czekam...", 
-                    KOLOR_ZOLTY, skladnik, KOLOR_RESET);
-                wyslij_log(sem_id, log_buf);
-                czy_czekam = 1;
-            }
-
-            usleep(10000);
-            continue;
-        }
-
-        czy_czekam = 0;
 
         int wstawiono = 0;
         for (int k=0; k<ilosc; k++) {
@@ -156,11 +113,14 @@ int main(int argc, char *argv[]) {
 
         sem_signal(sem_id, SEM_MUTEX);
         
-        for (int j = 0; j < wstawiono; j++) {
-            sem_signal(sem_id, sem_skladnik);
-        }
+        // Sygnalizujemy dostepnosc towaru
+        struct sembuf signal_op;
+        signal_op.sem_num = sem_skladnik;
+        signal_op.sem_op = wstawiono;
+        signal_op.sem_flg = 0;
+        semop(sem_id, &signal_op, 1);
         
-        sleep((rand() % 3) + 1);
+        //sleep((rand() % 3) + 1);
     }
     
     sprintf(log_buf, "%s[DOSTAWCA-%c]%s Koniec pracy", 

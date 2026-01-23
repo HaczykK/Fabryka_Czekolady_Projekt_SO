@@ -24,7 +24,7 @@ void inicjalizuj_kolejke(RingQueue* q) {
     q->tail = 0;
     q->count = 0;
     // Wyzerowanie bufora dla bezpieczenstwa
-    memset(q->dane, 0, KOLEJKA_POJEMNOSC); 
+    memset(q->dane, 0, KOLEJKA_POJEMNOSC);
 }
 
 void inicjalizuj_magazyn(Magazyn* mag) {
@@ -63,23 +63,23 @@ int czy_mozna_wstawic(Magazyn* mag, char typ) {
     if (q == NULL) return 0;
     
     int rozmiar = rozmiar_skladnika(typ);
-
+    
     // Sprawdz limit kolejki
     if (q->count >= KOLEJKA_POJEMNOSC) return 0;
-
+    
     // Sprawdz limit calkowitej pojemnosci magazynu
     if (mag->suma_bajtow + rozmiar > MAGAZYN_POJEMNOSC) return 0;
     
     return 1;
 }
 
-// Wstawia skladnik do odpowiedniej kolejki FIFO (prawdziwy ring buffer)
+// Wstawia skladnik do odpowiedniej kolejki FIFO
 int wstaw_do_kolejki(Magazyn* mag, char typ) {
     RingQueue* q = pobierz_kolejke(mag, typ);
     if (q == NULL) return 0;
     
     int rozmiar = rozmiar_skladnika(typ);
-
+    
     // Sprawdz limity
     if (q->count >= KOLEJKA_POJEMNOSC) return 0;
     if (mag->suma_bajtow + rozmiar > MAGAZYN_POJEMNOSC) return 0;
@@ -95,11 +95,11 @@ int wstaw_do_kolejki(Magazyn* mag, char typ) {
     return 1;
 }
 
-// Pobiera skladnik z odpowiedniej kolejki FIFO (prawdziwy ring buffer)
+// Pobiera skladnik z odpowiedniej kolejki FIFO
 int pobierz_z_kolejki(Magazyn* mag, char typ) {
     RingQueue* q = pobierz_kolejke(mag, typ);
     if (q == NULL) return 0;
-
+    
     // Sprawdz czy jest co pobrac
     if (q->count <= 0) return 0;
     
@@ -107,7 +107,7 @@ int pobierz_z_kolejki(Magazyn* mag, char typ) {
     
     // Odczytaj dane z tablicy
     char pobrany_bajt = q->dane[q->tail];
-    
+
     // Pobierz z tail (FIFO - pobieramy z poczatku)
     q->tail = (q->tail + 1) % KOLEJKA_POJEMNOSC;
     q->count--;
@@ -142,7 +142,7 @@ void wyswietl_stan_magazynu(int sem_id, Magazyn* mag) {
     wyslij_log(sem_id, log_buf);
     sprintf(log_buf, "%s%s+--------------------------------------------+", KOLOR_BOLD, KOLOR_CYAN);
     wyslij_log(sem_id, log_buf);
-    sprintf(log_buf, "|          STAN MAGAZYNU (RING BUFFER)       |");
+    sprintf(log_buf, "|               STAN MAGAZYNU                |");
     wyslij_log(sem_id, log_buf);
     sprintf(log_buf, "+--------------------------------------------+%s", KOLOR_RESET);
     wyslij_log(sem_id, log_buf);
@@ -160,7 +160,7 @@ void wyswietl_stan_magazynu(int sem_id, Magazyn* mag) {
             kolor_zapelnienia, mag->suma_bajtow, KOLOR_RESET, 
             MAGAZYN_POJEMNOSC, kolor_zapelnienia, procent, KOLOR_RESET);
     wyslij_log(sem_id, log_buf);
-    sprintf(log_buf,"|  Wolne:  %4d bajtow                        |", MAGAZYN_POJEMNOSC - mag->suma_bajtow);
+    sprintf(log_buf,"|  Wolne:  %4d bajtow                       |", MAGAZYN_POJEMNOSC - mag->suma_bajtow);
     wyslij_log(sem_id, log_buf);
     
     sprintf(log_buf, "%s%s+--------------------------------------------+%s\n", KOLOR_BOLD, KOLOR_CYAN, KOLOR_RESET);
@@ -173,10 +173,10 @@ void wyswietl_stan_magazynu(int sem_id, Magazyn* mag) {
 
 int utworz_pamiec_dzielona() {
     int shm_id = shmget(SHM_KEY, sizeof(Magazyn), IPC_CREAT | 0600);
-
-    if(shm_id == -1) { 
+    
+    if(shm_id == -1) {
         perror("shmget");
-        exit(EXIT_FAILURE); 
+        exit(EXIT_FAILURE);
     }
 
     printf("[SHM] Utworzono pamiec dzielono (ID: %d)\n", shm_id);
@@ -186,9 +186,9 @@ int utworz_pamiec_dzielona() {
 Magazyn* polacz_z_pamiecia_dzielona(int shm_id) {
     Magazyn* mag = (Magazyn*) shmat(shm_id, NULL, 0);
 
-    if(mag == (void*) -1) { 
-        perror("shmat"); 
-        exit(EXIT_FAILURE); 
+    if(mag == (void*) -1) {
+        perror("shmat");
+        exit(EXIT_FAILURE);
     }
 
     printf("[SHM] Polaczono z pamiecia dzielona (ID: %d)\n", shm_id);
@@ -197,18 +197,18 @@ Magazyn* polacz_z_pamiecia_dzielona(int shm_id) {
 }
 
 void odlacz_pamiec_dzielona(Magazyn* mag) {
-    if(shmdt(mag) == -1) { 
-        perror("shmdt"); 
-        exit(EXIT_FAILURE); 
+    if(shmdt(mag) == -1) {
+        perror("shmdt");
+        exit(EXIT_FAILURE);
     }
 
     printf("[SHM] Odloczono od pamieci dzielonej\n");
 }
 
 void usun_pamiec_dzielona(int shm_id) {
-    if (shmctl(shm_id, IPC_RMID, NULL) == -1) { 
-        perror("shmctl"); 
-        exit(EXIT_FAILURE); 
+    if (shmctl(shm_id, IPC_RMID, NULL) == -1) {
+        perror("shmctl");
+        exit(EXIT_FAILURE);
     }
 
     printf("[SHM] Usunieto pamiec dzielona (ID: %d)\n", shm_id);
@@ -219,12 +219,12 @@ void usun_pamiec_dzielona(int shm_id) {
 
 int utworz_semafory() {
     int sem_id = semget(SEM_KEY, SEM_COUNT, IPC_CREAT | 0600);
-
-    if (sem_id == -1) { 
-        perror("semget"); 
-        exit(EXIT_FAILURE); 
+    
+    if (sem_id == -1) {
+        perror("semget");
+        exit(EXIT_FAILURE);
     }
-
+    
     printf("[SEM] Utworzono zestaw semaforow (ID: %d, liczba: %d)\n", sem_id, SEM_COUNT);
     return sem_id;
 }
@@ -232,28 +232,49 @@ int utworz_semafory() {
 void inicjalizuj_semafory(int sem_id) {
     union semun arg;
     
-    // SEM_MUTEX (pamiec) -> 1 (wolny)
+    //mutex binarny (1 = wolny)
     arg.val = 1;
     if (semctl(sem_id, SEM_MUTEX, SETVAL, arg) == -1) { 
         perror("semctl SEM_MUTEX"); 
         exit(EXIT_FAILURE); 
     }
+
+
+    if (semctl(sem_id, SEM_LOG, SETVAL, arg) == -1) { 
+        perror("semctl SEM_LOG"); 
+        exit(EXIT_FAILURE); 
+    }
     
-    // SEM_WOLNE -> Pojemnosc
+    //liczba wolnych jednostek
     arg.val = MAGAZYN_POJEMNOSC;
     if (semctl(sem_id, SEM_WOLNE, SETVAL, arg) == -1) { 
         perror("semctl SEM_WOLNE"); 
         exit(EXIT_FAILURE); 
     }
     
-    // SEM_SKLAD_x -> 0
+    // Semafory skladnikow (FULL)
     arg.val = 0;
     for(int i=SEM_SKLAD_A; i<=SEM_SKLAD_D; i++) semctl(sem_id, i, SETVAL, arg);
 
-    // SEM_LOG -> 1 (wolny - zeby mozna bylo pisac do pliku)
-    arg.val = 1;
-    if (semctl(sem_id, SEM_LOG, SETVAL, arg) == -1) { 
-        perror("semctl SEM_LOG"); 
+    // Semafory limitow (EMPTY slots)
+    arg.val = KOLEJKA_POJEMNOSC;
+    if (semctl(sem_id, SEM_LIMIT_A, SETVAL, arg) == -1) { 
+        perror("semctl LIMIT_A"); 
+        exit(EXIT_FAILURE); 
+    }
+
+    if (semctl(sem_id, SEM_LIMIT_B, SETVAL, arg) == -1) { 
+        perror("semctl LIMIT_B"); 
+        exit(EXIT_FAILURE); 
+    }
+
+    if (semctl(sem_id, SEM_LIMIT_C, SETVAL, arg) == -1) { 
+        perror("semctl LIMIT_C"); 
+        exit(EXIT_FAILURE); 
+    }
+
+    if (semctl(sem_id, SEM_LIMIT_D, SETVAL, arg) == -1) { 
+        perror("semctl LIMIT_D"); 
         exit(EXIT_FAILURE); 
     }
 }
@@ -267,17 +288,23 @@ void zaktualizuj_semafory(int sem_id, Magazyn* mag) {
     arg.val = mag->kolejka_B.count; semctl(sem_id, SEM_SKLAD_B, SETVAL, arg);
     arg.val = mag->kolejka_C.count; semctl(sem_id, SEM_SKLAD_C, SETVAL, arg);
     arg.val = mag->kolejka_D.count; semctl(sem_id, SEM_SKLAD_D, SETVAL, arg);
-    
-    // SEM_LOG zawsze resetujemy na 1 (bezpiecznik)
+
+    // Aktualizujemy limity - ile pustych miejsc
+    arg.val = KOLEJKA_POJEMNOSC - mag->kolejka_A.count; semctl(sem_id, SEM_LIMIT_A, SETVAL, arg);
+    arg.val = KOLEJKA_POJEMNOSC - mag->kolejka_B.count; semctl(sem_id, SEM_LIMIT_B, SETVAL, arg);
+    arg.val = KOLEJKA_POJEMNOSC - mag->kolejka_C.count; semctl(sem_id, SEM_LIMIT_C, SETVAL, arg);
+    arg.val = KOLEJKA_POJEMNOSC - mag->kolejka_D.count; semctl(sem_id, SEM_LIMIT_D, SETVAL, arg);
+
     arg.val = 1; semctl(sem_id, SEM_LOG, SETVAL, arg);
+    arg.val = 1; semctl(sem_id, SEM_MUTEX, SETVAL, arg);
 }
 
 void usun_semafory(int sem_id) {
-    if (semctl(sem_id, 0, IPC_RMID) == -1) { 
-        perror("semctl IPC_RMID"); 
-        exit(EXIT_FAILURE); 
+    if (semctl(sem_id, 0, IPC_RMID) == -1) {
+        perror("semctl IPC_RMID");
+        exit(EXIT_FAILURE);
     }
-
+    
     printf("[SEM] Usunieto semafory (ID: %d)\n", sem_id);
 }
 
@@ -289,8 +316,8 @@ void sem_wait(int sem_id, int sem_num) {
     
     if (semop(sem_id, &op, 1) == -1) {
         if (errno == EINTR) {
-            return;
-        } 
+            return; 
+        }
         perror("semop wait");
         exit(EXIT_FAILURE);
     }
@@ -302,17 +329,17 @@ void sem_signal(int sem_id, int sem_num) {
     op.sem_op = 1;
     op.sem_flg = 0;
     
-    if (semop(sem_id, &op, 1) == -1) { 
-        perror("semop signal"); 
-        exit(EXIT_FAILURE); 
+    if (semop(sem_id, &op, 1) == -1) {
+        perror("semop signal");
+        exit(EXIT_FAILURE);
     }
 }
 
 int sem_getval(int sem_id, int sem_num) {
     int val = semctl(sem_id, sem_num, GETVAL);
-    if (val == -1) { 
-        perror("semctl GETVAL"); 
-        exit(EXIT_FAILURE); 
+    if (val == -1) {
+        perror("semctl GETVAL");
+        exit(EXIT_FAILURE);
     }
     
     return val;
@@ -322,9 +349,9 @@ int sem_getval(int sem_id, int sem_num) {
 int polacz_semafory() {
     int sem_id = semget(SEM_KEY, SEM_COUNT, 0);
 
-    if(sem_id == -1) { 
-        perror("semget polacz"); 
-        exit(EXIT_FAILURE); 
+    if(sem_id == -1) {
+        perror("semget polacz");
+        exit(EXIT_FAILURE);
     }
 
     return sem_id;
@@ -333,9 +360,9 @@ int polacz_semafory() {
 int polacz_magazyn_z_pamiecia_dzielona() {
     int shm_id = shmget(SHM_KEY, sizeof(Magazyn), 0);
 
-    if(shm_id == -1) { 
-        perror("shmget polacz"); 
-        exit(EXIT_FAILURE); 
+    if(shm_id == -1) {
+        perror("shmget polacz");
+        exit(EXIT_FAILURE);
     }
 
     return shm_id;
@@ -345,9 +372,9 @@ int polacz_magazyn_z_pamiecia_dzielona() {
 
 int zapisz_stan_magazynu(Magazyn* mag, const char* plik) {
     FILE* f = fopen(plik, "wb");
-    if (f == NULL) { 
-        perror("fopen zapis"); 
-        return -1; 
+    if (f == NULL) {
+        perror("fopen zapis");
+        return -1;
     }
     
     size_t written = fwrite(mag, sizeof(Magazyn), 1, f);
@@ -357,7 +384,10 @@ int zapisz_stan_magazynu(Magazyn* mag, const char* plik) {
         return -1;
     }
     
-    printf("[PLIK] Zapisano stan. Magazyn zajety: %d/%d\n", mag->suma_bajtow, MAGAZYN_POJEMNOSC);
+    printf("[PLIK] Zapisano stan. Magazyn zajety: %d/%d (A:%d B:%d C:%d D:%d)\n", 
+           mag->suma_bajtow, MAGAZYN_POJEMNOSC, 
+           mag->kolejka_A.count, mag->kolejka_B.count, 
+           mag->kolejka_C.count, mag->kolejka_D.count);
     return 0;
 }
 
@@ -383,10 +413,12 @@ int odczytaj_stan_magazynu(Magazyn* mag, const char* plik) {
         mag->kolejka_D.count * ROZMIAR_D;
     
     if (mag->suma_bajtow != faktycznie_zajete) {
-        printf("[FIX] Wykryto blad danych! Naprawiam...\n");
+        printf("[FIX] Wykryto blad danych! Plik twierdzil %d, a suma kolejek to %d.\n", mag->suma_bajtow, faktycznie_zajete);
+        printf("[FIX] Naprawiam licznik suma_bajtow...\n");
         mag->suma_bajtow = faktycznie_zajete;
     }
-    printf("[PLIK] Odczytano stan.\n");
+
+    printf("[PLIK] Odczytano i zweryfikowano stan. Zajete: %d/%d\n", mag->suma_bajtow, MAGAZYN_POJEMNOSC);
     return 0;
 }
 
@@ -404,7 +436,7 @@ void wyslij_log(int sem_id, const char* tekst) {
     // Pobierany aktualny czas
     time_t now = time(NULL);
     struct tm *t = localtime(&now);
-
+    
     // Formatowanie czasu
     char czas_str[32];
     strftime(czas_str, sizeof(czas_str), "%H:%M:%S", t);
@@ -428,8 +460,7 @@ void wyslij_log(int sem_id, const char* tekst) {
 
     // Zapisz do pliku chronionego semaforem
     if (sem_id != -1) {
-        sem_wait(sem_id, SEM_LOG); // <--- ZAJMUJEMY PLIK
-        
+        sem_wait(sem_id, SEM_LOG);
         FILE* f = fopen(PLIK_RAPORTU, "a");
         if (f) {
             fprintf(f, "%s\n", pelna_wiadomosc);
@@ -437,7 +468,7 @@ void wyslij_log(int sem_id, const char* tekst) {
         } else {
             perror("Blad otwarcia raportu");
         }
-        
-        sem_signal(sem_id, SEM_LOG); // <--- ZWALNIAMY PLIK
+
+        sem_signal(sem_id, SEM_LOG);
     }
 }
