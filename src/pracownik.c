@@ -54,6 +54,11 @@ int main(int argc, char *argv[]) {
     
     while (running) {
 
+
+        sprintf(log_buf, "%s[PRACOWNIK-%d]%s Czekam na komplet skladnikow...", 
+                KOLOR_CYAN, stanowisko, KOLOR_RESET);
+        wyslij_log(sem_id, log_buf);
+        
         // Atomowe pobieranie skladnikow A, B i C/D jednoczesnie
         if (semop(sem_id, czekaj, 3) == -1) {
              if (!running) break;
@@ -116,7 +121,7 @@ int main(int argc, char *argv[]) {
 
 
         // Produkcja
-        //sleep((rand() % 5) + 1);
+        sleep((rand() % 5) + 1);
         wyprodukowano++;
         sprintf(log_buf, "%s%s[PRACOWNIK-%d] *** WYPRODUKOWANO CZEKOLADE - %s  #%d ***%s", 
                 KOLOR_BOLD, KOLOR_MAGENTA, stanowisko, typ_czekolady, wyprodukowano, KOLOR_RESET);

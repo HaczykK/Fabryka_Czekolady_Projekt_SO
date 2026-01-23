@@ -7,8 +7,17 @@
 #define MAGAZYN_PLIK "magazyn_stan.dat"
 #define PLIK_RAPORTU "raport.txt"
 
-// Pojemnosc magazynu
-#define MAGAZYN_POJEMNOSC 50
+// Kolory dla terminala
+#define KOLOR_RESET   "\033[0m"
+#define KOLOR_CZERWONY "\033[31m"
+#define KOLOR_ZIELONY  "\033[32m"
+#define KOLOR_ZOLTY    "\033[33m"
+#define KOLOR_NIEBIESKI "\033[34m"
+#define KOLOR_MAGENTA  "\033[35m"
+#define KOLOR_CYAN     "\033[36m"
+#define KOLOR_BIALY    "\033[37m"
+#define KOLOR_BOLD     "\033[1m"
+
 
 // Rozmiary skladnikow 
 #define ROZMIAR_A 1
@@ -23,17 +32,6 @@
 #define BAJT_D 'D'
 #define BAJT_PUSTY '.'
 
-// Kolory dla terminala
-#define KOLOR_RESET   "\033[0m"
-#define KOLOR_CZERWONY "\033[31m"
-#define KOLOR_ZIELONY  "\033[32m"
-#define KOLOR_ZOLTY    "\033[33m"
-#define KOLOR_NIEBIESKI "\033[34m"
-#define KOLOR_MAGENTA  "\033[35m"
-#define KOLOR_CYAN     "\033[36m"
-#define KOLOR_BIALY    "\033[37m"
-#define KOLOR_BOLD     "\033[1m"
-
 // Klucze IPC
 #define SHM_KEY 0x1234
 #define SEM_KEY 0x5678
@@ -41,27 +39,27 @@
 // Indeksy semaforow
 #define SEM_MUTEX 0       // Mutex do ochrony pamieci
 #define SEM_WOLNE 1       // Liczba wolnych bajtow w magazynie
-
 // Dostepnosc towarow 
 #define SEM_SKLAD_A 2     
 #define SEM_SKLAD_B 3     
 #define SEM_SKLAD_C 4     
 #define SEM_SKLAD_D 5
-
 // Limit miejsca w kolejkach 
 #define SEM_LIMIT_A 6
 #define SEM_LIMIT_B 7
 #define SEM_LIMIT_C 8
 #define SEM_LIMIT_D 9
-
 // Logowanie
 #define SEM_LOG 10
-
 // Laczna liczba semaforow
-#define SEM_COUNT 11       
+#define SEM_COUNT 11      
 
-// Pojemnosc kolejek dla kazdego skladnika - 7 * 7 bajtow = 49 < 50
-#define KOLEJKA_POJEMNOSC 7
+
+// Pojemnosc magazynu
+#define MAGAZYN_POJEMNOSC 14 
+#define SUMA_ROZMIAROW (ROZMIAR_A + ROZMIAR_B + ROZMIAR_C + ROZMIAR_D)
+// Maksymalna liczba jednostek skladnikow w kolejkach na bazie pojemnnosci magazynu)
+#define KOLEJKA_POJEMNOSC (MAGAZYN_POJEMNOSC / SUMA_ROZMIAROW) // Przy minimalnej wartosci KOLEJKA_POJEMNOSC czyli 1 (MAGAZYN_POJEMNOSC <=13) nalezy w dostawca.c zmienic ilosc dostarczanych jednostek na 1
 
 // Ring buffer FIFO dla pojedynczego typu skladnika
 typedef struct {

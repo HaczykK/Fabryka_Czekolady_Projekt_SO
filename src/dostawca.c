@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
     srand(time(NULL) + getpid());
 
     while (running) {
-        int ilosc = (rand() % 2) + 1; // Male porcje (1-2)
+        int ilosc = (rand() % 2) + 1; // Male porcje (1-2) (Jesli MAGAZYN_POJEMNOSC <=13 nalezy ustawic na 1)
         int potrzebne_miejsce = ilosc * rozmiar;
         
         // Tworzymy tablice operacji dla semop
@@ -82,6 +82,15 @@ int main(int argc, char *argv[]) {
         czekaj[1].sem_num = sem_limit;
         czekaj[1].sem_op = -ilosc;
         czekaj[1].sem_flg = 0;
+
+        int wolne_bajty = semctl(sem_id, SEM_WOLNE, GETVAL);
+        int wolne_sloty = semctl(sem_id, sem_limit, GETVAL);
+        
+        if (wolne_bajty < potrzebne_miejsce || wolne_sloty < ilosc) {
+            sprintf(log_buf, "%s[DOSTAWCA-%c]%s Brak miejsca w magazynie. Czekam...", 
+                    KOLOR_ZOLTY, skladnik, KOLOR_RESET);
+            wyslij_log(sem_id, log_buf);
+        }
 
         if (semop(sem_id, czekaj, 2) == -1) {
             if (!running) break;
@@ -120,7 +129,7 @@ int main(int argc, char *argv[]) {
         signal_op.sem_flg = 0;
         semop(sem_id, &signal_op, 1);
         
-        //sleep((rand() % 3) + 1);
+        sleep((rand() % 3) + 1);
     }
     
     sprintf(log_buf, "%s[DOSTAWCA-%c]%s Koniec pracy", 
