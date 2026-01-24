@@ -21,6 +21,7 @@ int main(int argc, char *argv[]) {
     // Rejestracja sygnalow
     signal(SIGUSR1, handle_signal); // Stop od Dyrektora
     signal(SIGTERM, handle_signal);
+    signal(SIGINT, handle_signal);   // Obsluga Ctrl+C
 
     int stanowisko = atoi(argv[1]);
     const char* typ_czekolady = (stanowisko == 1) ? "TYP_1 (A+B+C)" : "TYP_2 (A+B+D)";
@@ -54,6 +55,14 @@ int main(int argc, char *argv[]) {
     
     while (running) {
 
+        // Sprawdz czy magazyn jest otwarty
+        if (!mag->magazyn_otwarty) {
+            sprintf(log_buf, "%s[PRACOWNIK-%d]%s Magazyn zamkniety - czekam...", 
+                    KOLOR_CZERWONY, stanowisko, KOLOR_RESET);
+            wyslij_log(sem_id, log_buf);
+            sleep(2);
+            continue;
+        }
 
         sprintf(log_buf, "%s[PRACOWNIK-%d]%s Czekam na komplet skladnikow...", 
                 KOLOR_CYAN, stanowisko, KOLOR_RESET);

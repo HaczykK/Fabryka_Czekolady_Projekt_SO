@@ -21,6 +21,7 @@ int main(int argc, char *argv[]) {
     // Rejestracja sygnalow
     signal(SIGUSR2, handle_signal);
     signal(SIGTERM, handle_signal);
+    signal(SIGINT, handle_signal);   // Obsluga Ctrl+C
 
     char skladnik = argv[1][0];
     int rozmiar; 
@@ -67,6 +68,15 @@ int main(int argc, char *argv[]) {
     srand(time(NULL) + getpid());
 
     while (running) {
+        // Sprawdz czy magazyn jest otwarty
+        if (!mag->magazyn_otwarty) {
+            sprintf(log_buf, "%s[DOSTAWCA-%c]%s Magazyn zamkniety - czekam...", 
+                    KOLOR_CZERWONY, skladnik, KOLOR_RESET);
+            wyslij_log(sem_id, log_buf);
+            sleep(2);
+            continue;
+        }
+        
         int ilosc = (rand() % 2) + 1; // Male porcje (1-2) (Jesli MAGAZYN_POJEMNOSC <=13 nalezy ustawic na 1)
         int potrzebne_miejsce = ilosc * rozmiar;
         

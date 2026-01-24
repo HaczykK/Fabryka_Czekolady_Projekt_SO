@@ -56,10 +56,8 @@
 
 
 // Pojemnosc magazynu
-#define MAGAZYN_POJEMNOSC 14 
-#define SUMA_ROZMIAROW (ROZMIAR_A + ROZMIAR_B + ROZMIAR_C + ROZMIAR_D)
-// Maksymalna liczba jednostek skladnikow w kolejkach na bazie pojemnnosci magazynu)
-#define KOLEJKA_POJEMNOSC (MAGAZYN_POJEMNOSC / SUMA_ROZMIAROW) // Przy minimalnej wartosci KOLEJKA_POJEMNOSC czyli 1 (MAGAZYN_POJEMNOSC <=13) nalezy w dostawca.c zmienic ilosc dostarczanych jednostek na 1
+#define KOLEJKA_POJEMNOSC 10
+#define MAGAZYN_POJEMNOSC (KOLEJKA_POJEMNOSC * 4)
 
 // Ring buffer FIFO dla pojedynczego typu skladnika
 typedef struct {
@@ -77,6 +75,7 @@ typedef struct {
     RingQueue kolejka_D;
     
     int suma_bajtow;  // Laczna liczba zajetych bajtow (dla limitu MAGAZYN_POJEMNOSC)
+    int magazyn_otwarty;  // 1 = otwarty, 0 = zamkniety (blokada operacji)
 } Magazyn;
 
 #endif

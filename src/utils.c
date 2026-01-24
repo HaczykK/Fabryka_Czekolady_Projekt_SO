@@ -33,6 +33,7 @@ void inicjalizuj_magazyn(Magazyn* mag) {
     inicjalizuj_kolejke(&mag->kolejka_C);
     inicjalizuj_kolejke(&mag->kolejka_D);
     mag->suma_bajtow = 0;
+    mag->magazyn_otwarty = 1;  // Magazyn otwarty domyslnie
 }
 
 // Pomocnicza: zwraca wskaznik do kolejki dla danego typu skladnika
@@ -417,6 +418,9 @@ int odczytaj_stan_magazynu(Magazyn* mag, const char* plik) {
         printf("[FIX] Naprawiam licznik suma_bajtow...\n");
         mag->suma_bajtow = faktycznie_zajete;
     }
+    
+    // Przy starcie magazyn zawsze otwarty
+    mag->magazyn_otwarty = 1;
 
     printf("[PLIK] Odczytano i zweryfikowano stan. Zajete: %d/%d\n", mag->suma_bajtow, MAGAZYN_POJEMNOSC);
     return 0;
