@@ -55,11 +55,14 @@
 
 
 // Pojemnosc magazynu
-// Pojemnosc magazynu
-#define MAGAZYN_POJEMNOSC 50 
+#define MAGAZYN_POJEMNOSC 50 //bajty
+
+// Ustawianie na sztywno maksymalnej liczby sztuk kazdego skladnika
+//#define KOLEJKA_POJEMNOSC 18 // Ustawianie na sztywno maksymalnej liczby sztuk kazdego skladnika
+
+// Obliczanie maksymalnej ilosci sztuk kazdego skladnika w kolejkach na bazie pojemnosci magazynu
 #define SUMA_ROZMIAROW (ROZMIAR_A + ROZMIAR_B + ROZMIAR_C + ROZMIAR_D)
-// Maksymalna liczba jednostek skladnikow w kolejkach na bazie pojemnnosci magazynu)
-#define KOLEJKA_POJEMNOSC (MAGAZYN_POJEMNOSC / SUMA_ROZMIAROW) 
+#define KOLEJKA_POJEMNOSC ((MAGAZYN_POJEMNOSC + SUMA_ROZMIAROW - 1) / SUMA_ROZMIAROW)
 
 // Ring buffer FIFO dla pojedynczego typu skladnika
 typedef struct {
