@@ -10,10 +10,8 @@ void inicjalizuj_magazyn(Magazyn* mag);
 // Operacje na kolejkach skladnikow
 RingQueue* pobierz_kolejke(Magazyn* mag, char typ);
 int rozmiar_skladnika(char typ);
-int czy_mozna_wstawic(Magazyn* mag, char typ);
 int wstaw_do_kolejki(Magazyn* mag, char typ);
 int pobierz_z_kolejki(Magazyn* mag, char typ);
-int zlicz_skladnik(Magazyn* mag, char typ);
 
 // Wyswietlanie stanu magazynu
 void wyswietl_stan_magazynu(int sem_id, Magazyn* mag);
@@ -31,7 +29,6 @@ void zaktualizuj_semafory(int sem_id, Magazyn* mag);
 void usun_semafory(int sem_id);
 void sem_wait(int sem_id, int sem_num);
 void sem_signal(int sem_id, int sem_num);
-int sem_getval(int sem_id, int sem_num);
 
 // Pomocnicze funkcje
 int polacz_semafory();

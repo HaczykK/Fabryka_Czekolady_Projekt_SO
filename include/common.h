@@ -30,7 +30,6 @@
 #define BAJT_B 'B'
 #define BAJT_C 'C'
 #define BAJT_D 'D'
-#define BAJT_PUSTY '.'
 
 // Klucze IPC
 #define SHM_KEY 0x1234
@@ -56,8 +55,11 @@
 
 
 // Pojemnosc magazynu
-#define KOLEJKA_POJEMNOSC 10
-#define MAGAZYN_POJEMNOSC (KOLEJKA_POJEMNOSC * 4)
+// Pojemnosc magazynu
+#define MAGAZYN_POJEMNOSC 50 
+#define SUMA_ROZMIAROW (ROZMIAR_A + ROZMIAR_B + ROZMIAR_C + ROZMIAR_D)
+// Maksymalna liczba jednostek skladnikow w kolejkach na bazie pojemnnosci magazynu)
+#define KOLEJKA_POJEMNOSC (MAGAZYN_POJEMNOSC / SUMA_ROZMIAROW) 
 
 // Ring buffer FIFO dla pojedynczego typu skladnika
 typedef struct {

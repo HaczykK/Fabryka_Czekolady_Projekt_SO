@@ -58,22 +58,6 @@ int rozmiar_skladnika(char typ) {
     }
 }
 
-// Sprawdza czy mozna wstawic skladnik do magazynu
-int czy_mozna_wstawic(Magazyn* mag, char typ) {
-    RingQueue* q = pobierz_kolejke(mag, typ);
-    if (q == NULL) return 0;
-    
-    int rozmiar = rozmiar_skladnika(typ);
-    
-    // Sprawdz limit kolejki
-    if (q->count >= KOLEJKA_POJEMNOSC) return 0;
-    
-    // Sprawdz limit calkowitej pojemnosci magazynu
-    if (mag->suma_bajtow + rozmiar > MAGAZYN_POJEMNOSC) return 0;
-    
-    return 1;
-}
-
 // Wstawia skladnik do odpowiedniej kolejki FIFO
 int wstaw_do_kolejki(Magazyn* mag, char typ) {
     RingQueue* q = pobierz_kolejke(mag, typ);
@@ -115,13 +99,6 @@ int pobierz_z_kolejki(Magazyn* mag, char typ) {
     mag->suma_bajtow -= rozmiar;
     
     return (int)pobrany_bajt;
-}
-
-// Zwraca liczbe skladnikow danego typu w magazynie
-int zlicz_skladnik(Magazyn* mag, char typ) {
-    RingQueue* q = pobierz_kolejke(mag, typ);
-    if (q == NULL) return 0;
-    return q->count;
 }
 
 // Wyswietla stan magazynu
@@ -334,16 +311,6 @@ void sem_signal(int sem_id, int sem_num) {
         perror("semop signal");
         exit(EXIT_FAILURE);
     }
-}
-
-int sem_getval(int sem_id, int sem_num) {
-    int val = semctl(sem_id, sem_num, GETVAL);
-    if (val == -1) {
-        perror("semctl GETVAL");
-        exit(EXIT_FAILURE);
-    }
-    
-    return val;
 }
 
 //Funkcje pomocnicze dla magazynu

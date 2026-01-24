@@ -14,7 +14,6 @@ int liczba_dostawcow = 0;
 int liczba_pracownikow = 0;
 char log_buf[256];
 volatile sig_atomic_t running = 1;
-int sem_id_global = -1;
 
 // Handler dla SIGCHLD - zapobiega procesom zombie
 void handle_sigchld(int sig) {
@@ -140,9 +139,8 @@ int main() {
         zaktualizuj_semafory(sem_id, magazyn);
     }
     
-    // Ustawienie sem_id_log i globalnego
+    // Ustawienie sem_id_log
     sem_id_log = sem_id;
-    sem_id_global = sem_id;
 
     sprintf(log_buf, "\n[DYREKTOR] Poczatkowy stan magazynu:");
     wyslij_log(sem_id_log, log_buf);
