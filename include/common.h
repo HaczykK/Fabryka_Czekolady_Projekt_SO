@@ -55,7 +55,7 @@
 
 
 // Pojemnosc magazynu
-#define MAGAZYN_POJEMNOSC 50 //bajty
+#define MAGAZYN_POJEMNOSC 70 //bajty
 
 // Ustawianie na sztywno maksymalnej liczby sztuk kazdego skladnika
 //#define KOLEJKA_POJEMNOSC 18 // Ustawianie na sztywno maksymalnej liczby sztuk kazdego skladnika

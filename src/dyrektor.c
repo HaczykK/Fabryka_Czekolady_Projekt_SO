@@ -230,6 +230,7 @@ int main() {
                 break;
             
             case 2: // Zamknij/Otworz Magazyn
+                wyswietl_stan_magazynu(sem_id_log, magazyn);
                 sem_wait(sem_id, SEM_MUTEX);
                 if (magazyn->magazyn_otwarty) {
                     magazyn->magazyn_otwarty = 0;
@@ -270,10 +271,10 @@ int main() {
 
     // Zapisz stan magazynu jeśli przerwano przez Ctrl+C
     if (!running) {
-        sprintf(log_buf, "\n%s[DYREKTOR]%s Przerwano przez Ctrl+C - zapisuje stan magazynu...", 
+        sprintf(log_buf, "\n%s[DYREKTOR]%s Przerwano program - zapisuje stan magazynu...", 
                 KOLOR_ZOLTY, KOLOR_RESET);
         wyslij_log(sem_id_log, log_buf);
-        //zapisz_stan_magazynu(magazyn, MAGAZYN_PLIK);
+        zapisz_stan_magazynu(magazyn, MAGAZYN_PLIK);
     }
     
     // Czekaj na wszystkie procesy potomne
