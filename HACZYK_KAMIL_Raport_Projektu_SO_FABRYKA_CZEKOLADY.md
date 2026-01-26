@@ -150,7 +150,7 @@ System wykorzystuje **11 semaforów** w hierarchicznej strukturze:
 | Semafor | Typ | Wartość początkowa | Rola |
 |---------|-----|-------------------|------|
 | `SEM_MUTEX` | Binary | 1 | Mutex chroniący sekcje krytyczne |
-| `SEM_WOLNE` | Counting | 50 | Licznik wolnych bajtów w magazynie |
+| `SEM_WOLNE` | Counting | 70 | Licznik wolnych bajtów w magazynie |
 | `SEM_SKLAD_A/B/C/D` | Counting | 0 | Dostępność składników (producer-consumer) |
 | `SEM_LIMIT_A/B/C/D` | Counting | KOLEJKA_POJEMNOSC | Limit miejsc w kolejkach |
 | `SEM_LOG` | Binary | 1 | Ochrona dostępu do pliku raportu |
