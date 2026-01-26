@@ -1261,7 +1261,7 @@ Ponowne wysłanie przez dyrektora polecenie "2" - otwarcie magazynu
 - `execl()` - [dyrektor.c#L155](https://github.com/HaczykK/Fabryka_Czekolady_Projekt_SO/blob/main/src/dyrektor.c#L155)
 
 **wait() / waitpid() - Zbieranie procesów**:
-- `waitpid()` - [dyrektor.c#L285](https://github.com/HaczykK/Fabryka_Czekolady_Projekt_SO/blob/main/src/dyrektor.c#L285)
+- `waitpid()` - [dyrektor.c#L286](https://github.com/HaczykK/Fabryka_Czekolady_Projekt_SO/blob/main/src/dyrektor.c#L286)
 
 
 **exit() - Zakończenie procesu potomnego**:
@@ -1286,7 +1286,7 @@ Ponowne wysłanie przez dyrektora polecenie "2" - otwarcie magazynu
 ### e. Synchronizacja procesów (semafory)
 
 **semget() - Utworzenie zestawu semaforów**:
-- `semget()` [utils.c#L1997](https://github.com/HaczykK/Fabryka_Czekolady_Projekt_SO/blob/main/src/utils.c#L199) -  
+- `semget()` [utils.c#L199](https://github.com/HaczykK/Fabryka_Czekolady_Projekt_SO/blob/main/src/utils.c#L199) 
 
 **semctl() - Inicjalizacja wartości semaforów**:
 - `semctl()` [utils.c#L215](https://github.com/HaczykK/Fabryka_Czekolady_Projekt_SO/blob/main/src/utils.c#L215) 
@@ -1295,8 +1295,8 @@ Ponowne wysłanie przez dyrektora polecenie "2" - otwarcie magazynu
 - `semop()` [dostawca.c#L106](https://github.com/HaczykK/Fabryka_Czekolady_Projekt_SO/blob/main/src/dostawca.c#L106) 
 
 **sem_wait() i sem_signal() - Implementacja pomocniczych funckji dla operacji semaforowych**:
-- Implementacja `sem_wait()` -[utils.c#L289-L302](https://github.com/HaczykK/Fabryka_Czekolady_Projekt_SO/blob/main/src/utils.c#L289-L302) - 
-- Implementacja `sem_signal()` [utils.c#L304-L314](https://github.com/HaczykK/Fabryka_Czekolady_Projekt_SO/blob/main/src/utils.c#L304-L314) - 
+- Implementacja `sem_wait()` -[utils.c#L289-L302](https://github.com/HaczykK/Fabryka_Czekolady_Projekt_SO/blob/main/src/utils.c#L289-L302) 
+- Implementacja `sem_signal()` [utils.c#L304-L314](https://github.com/HaczykK/Fabryka_Czekolady_Projekt_SO/blob/main/src/utils.c#L304-L314)
 
 
 ### f. Łącza nazwane i nienazwane
